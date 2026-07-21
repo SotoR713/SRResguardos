@@ -2,5 +2,5 @@ namespace SRResguardos.Domain.Entities;
 
 public class FondoFijo : Activo
 {
-    public int monto { get; protected set; }
+    public decimal monto { get; protected set; }
 }
