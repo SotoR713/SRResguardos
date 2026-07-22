@@ -1,3 +1,6 @@
 <Solution>
-  <Project Path="SRResguardos.Api/SRResguardos.Api.csproj" />
+  <Project Path="SRResguardos.Application/SRResguardos.Application.csproj" />
+  <Project Path="SRResguardos.Domain/SRResguardos.Domain.csproj" />
+  <Project Path="SRResguardos.Infrastructure/SRResguardos.Infrastructure.csproj" />
+  <Project Path="SRResguardos/SRResguardos.Api.csproj" Id="c59d3a64-0447-45a3-89e8-d623a48b453b" />
 </Solution>

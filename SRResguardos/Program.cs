@@ -1,5 +1,5 @@
 
-namespace SRResguardos.Api
+namespace SRResguardos
 {
     public class Program
     {
