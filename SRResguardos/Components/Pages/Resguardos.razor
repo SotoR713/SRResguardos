@@ -1,0 +1,58 @@
+﻿@page "/resguardos"
+@using SRResguardos.Application.DTOs
+@using SRResguardos.Application.Interfaces.Persistence
+@inject IResguardoRepository RepositorioResguardos
+
+<PageTitle>Resguardos</PageTitle>
+
+<h1>Resguardos</h1>
+
+@if (_resguardos is null)
+{
+    <p>Cargando...</p>
+}
+else if (_resguardos.Count == 0)
+{
+    <p>No hay resguardos registrados.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Folio</th>
+                <th>Colaborador</th>
+                <th>Puesto</th>
+                <th>Tipo</th>
+                <th>Bien</th>
+                <th>Estado</th>
+                <th>Estado del bien</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var r in _resguardos)
+            {
+                <tr>
+                    <td>@r.Fecha.ToString("dd/MM/yyyy")</td>
+                    <td>@r.NumeroSerie</td>
+                    <td>@r.Colaborador</td>
+                    <td>@r.Puesto</td>
+                    <td>@r.TipoBien</td>
+                    <td>@r.IdentificadorBien</td>
+                    <td>@r.EstadoResguardo</td>
+                    <td>@r.EstadoBien</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private IReadOnlyList<ResguardoListaDto>? _resguardos;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _resguardos = await RepositorioResguardos.ObtenerListaAsync();
+    }
+}

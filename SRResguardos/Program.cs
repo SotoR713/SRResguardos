@@ -1,3 +1,5 @@
+using SRResguardos.Application.Interfaces.Persistence;
+using SRResguardos.Infrastructure.Persistence.Repositories;
 using SRResguardos.Web.Components;
 
 namespace SRResguardos
@@ -11,6 +13,11 @@ namespace SRResguardos
             // Add services to the container.
             builder.Services.AddRazorComponents()
                 .AddInteractiveServerComponents();
+
+            var cadena = builder.Configuration.GetConnectionString("SRResguardosBD")
+            ?? throw new InvalidOperationException("Falta la cadena de conexión SRResguardosBD.");
+
+            builder.Services.AddScoped<IResguardoRepository>(_ => new ResguardoRepository(cadena));
 
             var app = builder.Build();
 

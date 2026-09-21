@@ -1,6 +1,6 @@
-﻿using SRResguardos.Application.DTOs;
+﻿using Microsoft.Data.SqlClient;
+using SRResguardos.Application.DTOs;
 using SRResguardos.Application.Interfaces.Persistence;
-using Microsoft.Data.SqlClient;
 
 namespace SRResguardos.Infrastructure.Persistence.Repositories;
 
@@ -35,12 +35,16 @@ public class ResguardoRepository : IResguardoRepository
         INNER JOIN TiposBien t         ON t.Id  = b.TipoBienId
         INNER JOIN EstadosBienes eb    ON eb.Id = b.EstadoId
         INNER JOIN EstadosResguardo er ON er.Id = r.EstadoId
+        WHERE (@EstadoId IS NULL OR r.EstadoId = @EstadoId)
         ORDER BY r.NumeroSerie;";
 
         var lista = new List<ResguardoListaDto>();
 
         await using var conexion = new SqlConnection(_cadenaConexion);
         await using var comando = new SqlCommand(sql, conexion);
+
+        comando.Parameters.Add("@EstadoId", System.Data.SqlDbType.Int).Value =
+            (object?)estadoId ?? DBNull.Value;
 
         await conexion.OpenAsync();
 
