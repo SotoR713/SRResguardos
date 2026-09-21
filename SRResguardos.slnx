@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="SRResguardos.Application/SRResguardos.Application.csproj" />
+  <Project Path="SRResguardos.Domain/SRResguardos.Domain.csproj" />
+  <Project Path="SRResguardos.Infrastructure/SRResguardos.Infrastructure.csproj" />
+  <Project Path="SRResguardos/SRResguardos.Web.csproj" />
+</Solution>
