@@ -1,0 +1,44 @@
+﻿@page "/empleados"
+@using SRResguardos.Application.DTOs
+@using SRResguardos.Application.Interfaces.Persistence
+@inject IEmpleadoRepository RepositorioEmpleados
+
+<PageTitle>Empleados</PageTitle>
+
+<h1>Empleados</h1>
+
+@if (_empleados is null)
+{
+    <p>Cargando...</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Puesto</th>
+                <th>Estatus</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var emp in _empleados)
+            {
+                <tr>
+                    <td>@emp.Nombre</td>
+                    <td>@emp.Puesto</td>
+                    <td>@emp.Estatus</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private IReadOnlyList<EmpleadoListaDto>? _empleados;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _empleados = await RepositorioEmpleados.ObtenerListaAsync();
+    }
+}

@@ -19,6 +19,7 @@ namespace SRResguardos
 
             builder.Services.AddScoped<IResguardoRepository>(_ => new ResguardoRepository(cadena));
             builder.Services.AddScoped<ICatalogoRepository>(_ => new CatalogoRepository(cadena));
+            builder.Services.AddScoped<IEmpleadoRepository>(_ => new EmpleadoRepository(cadena));
 
             var app = builder.Build();
 
