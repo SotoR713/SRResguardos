@@ -1,0 +1,125 @@
+﻿@page "/puestos"
+@rendermode InteractiveServer
+@using SRResguardos.Application.DTOs
+@using SRResguardos.Application.Interfaces.Persistence
+@inject ICatalogoRepository RepositorioCatalogos
+
+<PageTitle>Puestos</PageTitle>
+
+<h1>Puestos</h1>
+
+<div class="d-flex gap-2 mb-3" style="max-width: 500px;">
+    <input class="form-control" placeholder="Nombre del puesto"
+           maxlength="50" @bind="_nombreNuevo" />
+    <button class="btn btn-primary" @onclick="AgregarAsync">Agregar</button>
+</div>
+
+@if (_mensaje is not null)
+{
+    <div class="alert @(_esError ? "alert-danger" : "alert-success")"
+         style="max-width: 500px;">
+        @_mensaje
+    </div>
+}
+
+@if (_puestos is null)
+{
+    <p>Cargando...</p>
+}
+else
+{
+    <table class="table" style="max-width: 500px;">
+        <thead>
+            <tr>
+                <th>Puesto</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in _puestos)
+            {
+                <tr>
+                    <td>@p.Nombre</td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-danger"
+                                @onclick="() => EliminarAsync(p.Id)">
+                            Eliminar
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private IReadOnlyList<CatalogoDto>? _puestos;
+    private string _nombreNuevo = string.Empty;
+    private string? _mensaje;
+    private bool _esError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        _puestos = await RepositorioCatalogos.ObtenerPuestosAsync();
+    }
+
+    private async Task AgregarAsync()
+    {
+        var nombre = _nombreNuevo.Trim();
+
+        if (nombre.Length == 0)
+        {
+            MostrarError("Escribe el nombre del puesto.");
+            return;
+        }
+
+        if (nombre.Length > 50)
+        {
+            MostrarError("El nombre no puede pasar de 50 caracteres.");
+            return;
+        }
+
+        try
+        {
+            await RepositorioCatalogos.AgregarPuestoAsync(nombre);
+            _nombreNuevo = string.Empty;
+            MostrarExito($"Puesto '{nombre}' agregado.");
+            await CargarAsync();
+        }
+        catch (InvalidOperationException ex)
+        {
+            MostrarError(ex.Message);
+        }
+    }
+
+    private async Task EliminarAsync(int id)
+    {
+        try
+        {
+            await RepositorioCatalogos.EliminarPuestoAsync(id);
+            MostrarExito("Puesto eliminado.");
+            await CargarAsync();
+        }
+        catch (InvalidOperationException ex)
+        {
+            MostrarError(ex.Message);
+        }
+    }
+
+    private void MostrarExito(string texto)
+    {
+        _mensaje = texto;
+        _esError = false;
+    }
+
+    private void MostrarError(string texto)
+    {
+        _mensaje = texto;
+        _esError = true;
+    }
+}
