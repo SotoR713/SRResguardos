@@ -1,4 +1,5 @@
 ﻿@page "/resguardos"
+@rendermode InteractiveServer
 @using SRResguardos.Application.DTOs
 @using SRResguardos.Application.Interfaces.Persistence
 @inject IResguardoRepository RepositorioResguardos
@@ -7,16 +8,28 @@
 
 <h1>Resguardos</h1>
 
+<div class="mb-3" style="max-width: 300px;">
+    <label class="form-label">Filtrar por estado</label>
+    <select class="form-select" value="@_estadoId" @onchange="CambiarEstado">
+        <option value="">Todos</option>
+        <option value="1">Activo</option>
+        <option value="2">Devuelto</option>
+        <option value="3">Cancelado</option>
+    </select>
+</div>
+
 @if (_resguardos is null)
 {
     <p>Cargando...</p>
 }
 else if (_resguardos.Count == 0)
 {
-    <p>No hay resguardos registrados.</p>
+    <p>No hay resguardos con ese estado.</p>
 }
 else
 {
+    <p>@_resguardos.Count resguardo(s)</p>
+
     <table class="table">
         <thead>
             <tr>
@@ -50,9 +63,25 @@ else
 
 @code {
     private IReadOnlyList<ResguardoListaDto>? _resguardos;
+    private int? _estadoId;
 
     protected override async Task OnInitializedAsync()
     {
-        _resguardos = await RepositorioResguardos.ObtenerListaAsync();
+        await CargarAsync();
+    }
+
+    private async Task CambiarEstado(ChangeEventArgs e)
+    {
+        var valor = e.Value?.ToString();
+
+        _estadoId = string.IsNullOrEmpty(valor) ? null : int.Parse(valor);
+
+        _resguardos = null;
+        await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        _resguardos = await RepositorioResguardos.ObtenerListaAsync(_estadoId);
     }
 }

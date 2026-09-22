@@ -13,7 +13,7 @@ public class ResguardoRepository : IResguardoRepository
         _cadenaConexion = cadenaConexion;
     }
 
-    public async Task<IReadOnlyList<ResguardoListaDto>> ObtenerListaAsync()
+    public async Task<IReadOnlyList<ResguardoListaDto>> ObtenerListaAsync(int? estadoId = null)
     {
         const string sql = @"
         SELECT
