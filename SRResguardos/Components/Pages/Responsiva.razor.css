@@ -1,0 +1,106 @@
+﻿.responsiva {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+    background: white;
+    border: 1px solid #ccc;
+    font-family: Arial, sans-serif;
+}
+
+.encabezado {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 3px solid #1b2a4a;
+    padding-bottom: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.empresa {
+    font-size: 1.8rem;
+    font-weight: bold;
+    letter-spacing: 0.1rem;
+    color: #1b2a4a;
+}
+
+.titulo {
+    font-weight: bold;
+}
+
+.seccion {
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    background: #1b2a4a;
+    color: white;
+    padding: 0.3rem 0.6rem;
+    margin: 1.5rem 0 0.5rem;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+}
+
+.datos {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+    .datos th,
+    .datos td {
+        border: 1px solid #999;
+        padding: 0.4rem 0.6rem;
+        text-align: left;
+    }
+
+    .datos th {
+        width: 30%;
+        background: #f0f0f0;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
+
+.legal {
+    font-size: 0.85rem;
+    text-align: justify;
+    margin-top: 1.5rem;
+}
+
+.firmas {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 4rem;
+    text-align: center;
+}
+
+.firma {
+    width: 40%;
+}
+
+.linea {
+    border-top: 1px solid #000;
+    margin-bottom: 0.3rem;
+}
+
+.rol {
+    font-size: 0.8rem;
+    color: #555;
+}
+
+.aviso-estado {
+    border: 2px solid #b00020;
+    color: #b00020;
+    text-align: center;
+    font-weight: bold;
+    padding: 0.4rem;
+    margin-bottom: 1rem;
+}
+
+@media print {
+    .no-imprimir {
+        display: none;
+    }
+
+    .responsiva {
+        border: none;
+        padding: 0;
+        max-width: none;
+    }
+}

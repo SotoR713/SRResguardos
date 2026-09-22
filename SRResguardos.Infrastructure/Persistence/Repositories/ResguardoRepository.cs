@@ -70,3 +70,72 @@ public class ResguardoRepository : IResguardoRepository
         return lista;
     }
 }
+
+
+public async Task<ResponsivaDto?> ObtenerResponsivaAsync(int id)
+    {
+        const string sql = @"
+        SELECT
+            r.Id,
+            r.NumeroSerie,
+            r.Fecha,
+            e.Nombre  AS Colaborador,
+            p.Nombre  AS Puesto,
+            en.Nombre AS Entrega,
+            t.Nombre  AS TipoBien,
+            r.IdentificadorBien,
+            r.Notas,
+            er.Nombre AS EstadoResguardo
+        FROM Resguardos r
+        INNER JOIN Empleados e         ON e.Id  = r.ColaboradorId
+        INNER JOIN Empleados en        ON en.Id = r.EntregaId
+        INNER JOIN Puestos p           ON p.Id  = r.PuestoId
+        INNER JOIN Bienes b            ON b.Identificador = r.IdentificadorBien
+        INNER JOIN TiposBien t         ON t.Id  = b.TipoBienId
+        INNER JOIN EstadosResguardo er ON er.Id = r.EstadoId
+        WHERE r.Id = @Id;
+
+        SELECT Etiqueta, Valor
+        FROM Caracteristicas
+        WHERE ResguardoId = @Id
+        ORDER BY Id;";
+
+        await using var conexion = new SqlConnection(_cadenaConexion);
+        await using var comando = new SqlCommand(sql, conexion);
+
+        comando.Parameters.Add("@Id", System.Data.SqlDbType.Int).Value = id;
+
+        await conexion.OpenAsync();
+
+        await using var lector = await comando.ExecuteReaderAsync();
+
+        if (!await lector.ReadAsync())
+            return null;
+
+        var responsiva = new ResponsivaDto
+        {
+            Id = lector.GetInt32(0),
+            NumeroSerie = lector.GetString(1),
+            Fecha = DateOnly.FromDateTime(lector.GetDateTime(2)),
+            Colaborador = lector.GetString(3),
+            Puesto = lector.GetString(4),
+            Entrega = lector.GetString(5),
+            TipoBien = lector.GetString(6),
+            IdentificadorBien = lector.GetString(7),
+            Notas = lector.GetString(8),
+            EstadoResguardo = lector.GetString(9)
+        };
+
+        await lector.NextResultAsync();
+
+        while (await lector.ReadAsync())
+        {
+            responsiva.Caracteristicas.Add(new CaracteristicaDto
+            {
+                Etiqueta = lector.GetString(0),
+                Valor = lector.GetString(1)
+            });
+        }
+
+        return responsiva;
+    }

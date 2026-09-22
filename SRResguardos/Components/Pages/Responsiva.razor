@@ -1,0 +1,92 @@
+﻿@page "/resguardos/{Id:int}/responsiva"
+@using System.Globalization
+@using SRResguardos.Application.DTOs
+@using SRResguardos.Application.Interfaces.Persistence
+@inject IResguardoRepository RepositorioResguardos
+
+<PageTitle>Responsiva @_responsiva?.NumeroSerie</PageTitle>
+
+@if (_cargando)
+{
+    <p>Cargando...</p>
+}
+else if (_responsiva is null)
+{
+    <p>No existe el resguardo solicitado.</p>
+}
+else
+{
+    <div class="no-imprimir mb-3">
+        <a href="resguardos" class="btn btn-outline-secondary">Volver</a>
+        <button class="btn btn-primary" onclick="window.print()">Imprimir</button>
+    </div>
+
+    <div class="responsiva">
+        @if (_responsiva.EstadoResguardo != "Activo")
+        {
+            <div class="aviso-estado">RESGUARDO @_responsiva.EstadoResguardo.ToUpper()</div>
+        }
+
+        <header class="encabezado">
+            <div class="empresa">FAMOSO</div>
+            <div class="titulo">RESGUARDO DE BIENES</div>
+            <div>Folio: <strong>@_responsiva.NumeroSerie</strong></div>
+        </header>
+
+        <table class="datos">
+            <tr><th>A cargo de</th><td>@_responsiva.Colaborador</td></tr>
+            <tr><th>Puesto</th><td>@_responsiva.Puesto</td></tr>
+            <tr><th>Fecha</th><td>@_responsiva.Fecha.ToString("dd 'de' MMMM 'de' yyyy", _cultura)</td></tr>
+        </table>
+
+        <h2 class="seccion">Bien a resguardar</h2>
+        <table class="datos">
+            <tr><th>Equipo</th><td>@_responsiva.TipoBien</td></tr>
+            <tr><th>Identificador</th><td>@_responsiva.IdentificadorBien</td></tr>
+        </table>
+
+        <h2 class="seccion">Características del equipo</h2>
+        <table class="datos">
+            @foreach (var c in _responsiva.Caracteristicas)
+            {
+                <tr><th>@c.Etiqueta</th><td>@c.Valor</td></tr>
+            }
+        </table>
+
+        <h2 class="seccion">Nota</h2>
+        <p>@_responsiva.Notas</p>
+
+        <p class="legal">
+            Texto de ejemplo: reemplázalo por el texto legal de tu formato oficial.
+            Recibo de FAMOSO el bien descrito y me hago responsable de su custodia y buen uso.
+        </p>
+
+        <div class="firmas">
+            <div class="firma">
+                <div class="linea"></div>
+                <div>@_responsiva.Colaborador</div>
+                <div class="rol">Resguardante</div>
+            </div>
+            <div class="firma">
+                <div class="linea"></div>
+                <div>@_responsiva.Entrega</div>
+                <div class="rol">Entrega</div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private ResponsivaDto? _responsiva;
+    private bool _cargando = true;
+    private static readonly CultureInfo _cultura = new("es-MX");
+
+    protected override async Task OnInitializedAsync()
+    {
+        _responsiva = await RepositorioResguardos.ObtenerResponsivaAsync(Id);
+        _cargando = false;
+    }
+}

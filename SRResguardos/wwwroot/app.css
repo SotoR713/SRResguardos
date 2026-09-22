@@ -79,3 +79,14 @@ h1:focus {
         right: 0.75rem;
         top: 0.5rem;
     }
+
+@media print {
+    .sidebar,
+    .top-row {
+        display: none !important;
+    }
+
+    article {
+        padding: 0 !important;
+    }
+}
