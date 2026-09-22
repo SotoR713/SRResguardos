@@ -3,6 +3,8 @@
 @using SRResguardos.Application.DTOs
 @using SRResguardos.Application.Interfaces.Persistence
 @inject IResguardoRepository RepositorioResguardos
+@inject ICatalogoRepository RepositorioCatalogos
+
 
 <PageTitle>Resguardos</PageTitle>
 
@@ -12,9 +14,10 @@
     <label class="form-label">Filtrar por estado</label>
     <select class="form-select" value="@_estadoId" @onchange="CambiarEstado">
         <option value="">Todos</option>
-        <option value="1">Activo</option>
-        <option value="2">Devuelto</option>
-        <option value="3">Cancelado</option>
+    @foreach (var estado in _estados)
+        {
+            <option value="@estado.Id">@estado.Nombre</option>
+        }
     </select>
 </div>
 
@@ -64,9 +67,11 @@ else
 @code {
     private IReadOnlyList<ResguardoListaDto>? _resguardos;
     private int? _estadoId;
+    private IReadOnlyList<CatalogoDto>? _estados = [];
 
     protected override async Task OnInitializedAsync()
     {
+        _estados = await RepositorioCatalogos.ObtenerEstadosResguardoAsync();
         await CargarAsync();
     }
 

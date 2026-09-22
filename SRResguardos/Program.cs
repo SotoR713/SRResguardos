@@ -18,6 +18,7 @@ namespace SRResguardos
             ?? throw new InvalidOperationException("Falta la cadena de conexión SRResguardosBD.");
 
             builder.Services.AddScoped<IResguardoRepository>(_ => new ResguardoRepository(cadena));
+            builder.Services.AddScoped<ICatalogoRepository>(_ => new CatalogoRepository(cadena));
 
             var app = builder.Build();
 
