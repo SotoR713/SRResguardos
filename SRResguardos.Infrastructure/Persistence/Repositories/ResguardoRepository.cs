@@ -69,10 +69,10 @@ public class ResguardoRepository : IResguardoRepository
 
         return lista;
     }
-}
 
 
-public async Task<ResponsivaDto?> ObtenerResponsivaAsync(int id)
+
+    public async Task<ResponsivaDto?> ObtenerResponsivaAsync(int id)
     {
         const string sql = @"
         SELECT
@@ -139,3 +139,4 @@ public async Task<ResponsivaDto?> ObtenerResponsivaAsync(int id)
 
         return responsiva;
     }
+}
