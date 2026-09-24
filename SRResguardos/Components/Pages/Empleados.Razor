@@ -1,11 +1,50 @@
 ﻿@page "/empleados"
+@rendermode InteractiveServer
 @using SRResguardos.Application.DTOs
 @using SRResguardos.Application.Interfaces.Persistence
 @inject IEmpleadoRepository RepositorioEmpleados
+@inject ICatalogoRepository RepositorioCatalogos
 
 <PageTitle>Empleados</PageTitle>
 
 <h1>Empleados</h1>
+
+<div class="card mb-4" style="max-width: 500px;">
+    <div class="card-body">
+        <h5 class="card-title">Nuevo empleado</h5>
+
+        <EditForm Model="_nuevo" OnValidSubmit="GuardarAsync">
+            <DataAnnotationsValidator />
+
+            <div class="mb-3">
+                <label class="form-label">Nombre</label>
+                <InputText class="form-control" @bind-Value="_nuevo.Nombre" />
+                <ValidationMessage For="() => _nuevo.Nombre" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Puesto</label>
+                <InputSelect class="form-select" @bind-Value="_nuevo.PuestoId">
+                    <option value="0">Elige un puesto...</option>
+                    @foreach (var p in _puestos)
+                    {
+                        <option value="@p.Id">@p.Nombre</option>
+                    }
+                </InputSelect>
+                <ValidationMessage For="() => _nuevo.PuestoId" />
+            </div>
+
+            <button type="submit" class="btn btn-primary">Guardar</button>
+        </EditForm>
+
+        @if (_mensaje is not null)
+        {
+            <div class="alert @(_esError ? "alert-danger" : "alert-success") mt-3 mb-0">
+                @_mensaje
+            </div>
+        }
+    </div>
+</div>
 
 @if (_empleados is null)
 {
@@ -36,9 +75,36 @@ else
 
 @code {
     private IReadOnlyList<EmpleadoListaDto>? _empleados;
+    private IReadOnlyList<CatalogoDto> _puestos = [];
+    private NuevoEmpleadoDto _nuevo = new();
+    private string? _mensaje;
+    private bool _esError;
 
     protected override async Task OnInitializedAsync()
     {
+        _puestos = await RepositorioCatalogos.ObtenerPuestosAsync();
+        await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
         _empleados = await RepositorioEmpleados.ObtenerListaAsync();
     }
-}
+
+    private async Task GuardarAsync()
+    {
+        try
+        {
+            await RepositorioEmpleados.CrearAsync(_nuevo);
+            _mensaje = $"Empleado '{_nuevo.Nombre.Trim()}' dado de alta.";
+            _esError = false;
+            _nuevo = new();
+            await CargarAsync();
+        }
+        catch (InvalidOperationException ex)
+        {
+            _mensaje = ex.Message;
+            _esError = true;
+        }
+    }
+}   

@@ -4,6 +4,8 @@
 @using SRResguardos.Application.Interfaces.Persistence
 @inject IResguardoRepository RepositorioResguardos
 @inject ICatalogoRepository RepositorioCatalogos
+@using SRResguardos.Domain.Enums
+@inject IJSRuntime JS
 
 
 <PageTitle>Resguardos</PageTitle>
@@ -19,8 +21,12 @@
             <option value="@estado.Id">@estado.Nombre</option>
         }
     </select>
-</div>
 
+</div>
+@if (_mensaje is not null)
+{
+    <div class="alert @(_esError ? "alert-danger" : "alert-success")">@_mensaje</div>
+}
 @if (_resguardos is null)
 {
     <p>Cargando...</p>
@@ -60,7 +66,17 @@ else
                     <td>@r.IdentificadorBien</td>
                     <td>@r.EstadoResguardo</td>
                     <td>@r.EstadoBien</td>
-                    <td><a href="resguardos/@r.Id/responsiva">Ver</a></td>
+                    <td>
+    <a href="resguardos/@r.Id/responsiva">Ver</a>
+    @if (r.EstadoResguardoId == (int)EstadoResguardo.Activo)
+    {
+        <button class="btn btn-sm btn-outline-warning ms-2"
+                @onclick="() => DevolverAsync(r)">
+            Devolver
+        </button>
+    }
+</td>
+                
                 </tr>
             }
         </tbody>
@@ -71,6 +87,30 @@ else
     private IReadOnlyList<ResguardoListaDto>? _resguardos;
     private int? _estadoId;
     private IReadOnlyList<CatalogoDto> _estados = [];
+    private string? _mensaje;
+private bool _esError;
+
+private async Task DevolverAsync(ResguardoListaDto r)
+{
+    var confirmado = await JS.InvokeAsync<bool>("confirm",
+        $"¿Registrar la devolución del bien {r.IdentificadorBien} de {r.Colaborador}?");
+
+    if (!confirmado)
+        return;
+
+    try
+    {
+        await RepositorioResguardos.DevolverAsync(r.Id);
+        _mensaje = $"Resguardo {r.NumeroSerie} devuelto.";
+        _esError = false;
+        await CargarAsync();
+    }
+    catch (InvalidOperationException ex)
+    {
+        _mensaje = ex.Message;
+        _esError = true;
+    }
+}
 
     protected override async Task OnInitializedAsync()
     {

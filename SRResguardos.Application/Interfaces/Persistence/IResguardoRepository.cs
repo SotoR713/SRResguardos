@@ -6,4 +6,6 @@ public interface IResguardoRepository
 {
     Task<IReadOnlyList<ResguardoListaDto>> ObtenerListaAsync(int? estadoId = null);
     Task<ResponsivaDto?> ObtenerResponsivaAsync(int id);
+    Task DevolverAsync(int id);
+
 }

@@ -1,6 +1,8 @@
 ﻿using Microsoft.Data.SqlClient;
 using SRResguardos.Application.DTOs;
 using SRResguardos.Application.Interfaces.Persistence;
+using SRResguardos.Domain.Enums;
+using System.Data;
 
 namespace SRResguardos.Infrastructure.Persistence.Repositories;
 
@@ -27,6 +29,8 @@ public class ResguardoRepository : IResguardoRepository
             r.Fecha,
             er.Nombre AS EstadoResguardo,
             eb.Nombre AS EstadoBien
+            eb.Nombre AS EstadoBien,
+            r.EstadoId
         FROM Resguardos r
         INNER JOIN Empleados e         ON e.Id  = r.ColaboradorId
         INNER JOIN Empleados en        ON en.Id = r.EntregaId
@@ -127,6 +131,7 @@ public class ResguardoRepository : IResguardoRepository
         };
 
         await lector.NextResultAsync();
+        EstadoResguardoId = lector.GetInt32(10)
 
         while (await lector.ReadAsync())
         {
@@ -138,5 +143,55 @@ public class ResguardoRepository : IResguardoRepository
         }
 
         return responsiva;
+    }
+
+    public async Task DevolverAsync(int id)
+    {
+        const string sqlResguardo = @"
+        UPDATE Resguardos
+        SET EstadoId = @Devuelto,
+            UltimaModificacion = SYSDATETIME()
+        OUTPUT INSERTED.IdentificadorBien
+        WHERE Id = @Id
+          AND EstadoId = @Activo;";
+
+        const string sqlBien = @"
+        UPDATE Bienes
+        SET EstadoId = @Disponible,
+            UltimaModificacion = SYSDATETIME()
+        WHERE Identificador = @Identificador
+          AND EstadoId = @Asignado;";
+
+        await using var conexion = new SqlConnection(_cadenaConexion);
+        await conexion.OpenAsync();
+
+        await using var transaccion = (SqlTransaction)await conexion.BeginTransactionAsync();
+
+        try
+        {
+            await using var cmdResguardo = new SqlCommand(sqlResguardo, conexion, transaccion);
+            cmdResguardo.Parameters.Add("@Id", SqlDbType.Int).Value = id;
+            cmdResguardo.Parameters.Add("@Activo", SqlDbType.Int).Value = (int)EstadoResguardo.Activo;
+            cmdResguardo.Parameters.Add("@Devuelto", SqlDbType.Int).Value = (int)EstadoResguardo.Devuelto;
+
+            var identificador = (string?)await cmdResguardo.ExecuteScalarAsync();
+
+            if (identificador is null)
+                throw new InvalidOperationException("Este resguardo ya no está activo.");
+
+            await using var cmdBien = new SqlCommand(sqlBien, conexion, transaccion);
+            cmdBien.Parameters.Add("@Identificador", SqlDbType.VarChar, 20).Value = identificador;
+            cmdBien.Parameters.Add("@Asignado", SqlDbType.Int).Value = (int)EstadoBien.Asignado;
+            cmdBien.Parameters.Add("@Disponible", SqlDbType.Int).Value = (int)EstadoBien.Disponible;
+
+            await cmdBien.ExecuteNonQueryAsync();
+
+            await transaccion.CommitAsync();
+        }
+        catch
+        {
+            await transaccion.RollbackAsync();
+            throw;
+        }
     }
 }
