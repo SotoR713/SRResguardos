@@ -28,7 +28,6 @@ public class ResguardoRepository : IResguardoRepository
             r.IdentificadorBien,
             r.Fecha,
             er.Nombre AS EstadoResguardo,
-            eb.Nombre AS EstadoBien
             eb.Nombre AS EstadoBien,
             r.EstadoId
         FROM Resguardos r
@@ -67,7 +66,8 @@ public class ResguardoRepository : IResguardoRepository
                 IdentificadorBien = lector.GetString(6),
                 Fecha = DateOnly.FromDateTime(lector.GetDateTime(7)),
                 EstadoResguardo = lector.GetString(8),
-                EstadoBien = lector.GetString(9)
+                EstadoBien = lector.GetString(9),
+                EstadoResguardoId = lector.GetInt32(10)
             });
         }
 
@@ -131,7 +131,6 @@ public class ResguardoRepository : IResguardoRepository
         };
 
         await lector.NextResultAsync();
-        EstadoResguardoId = lector.GetInt32(10)
 
         while (await lector.ReadAsync())
         {
