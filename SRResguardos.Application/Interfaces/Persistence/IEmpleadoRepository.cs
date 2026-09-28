@@ -6,4 +6,5 @@ public interface IEmpleadoRepository
 {
     Task<IReadOnlyList<EmpleadoListaDto>> ObtenerListaAsync();
     Task<int> CrearAsync(NuevoEmpleadoDto empleado);
+    Task ActivarAsync(int id);
 }
