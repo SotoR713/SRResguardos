@@ -6,4 +6,5 @@ public class EmpleadoListaDto
     public string Nombre { get; set; } = string.Empty;
     public string Puesto { get; set; } = string.Empty;
     public string Estatus { get; set; } = string.Empty;
+    public int EstatusId { get; set; }
 }
