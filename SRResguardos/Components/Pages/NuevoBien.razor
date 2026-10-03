@@ -1,0 +1,160 @@
+﻿@page "/bienes/nuevo"
+@rendermode InteractiveServer
+@using SRResguardos.Application.DTOs
+@using SRResguardos.Application.Interfaces.Persistence
+@using SRResguardos.Domain.Enums
+@inject IBienRepository RepositorioBienes
+@inject ICatalogoRepository RepositorioCatalogos
+
+<PageTitle>Nuevo bien</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3" style="max-width: 760px;">
+    <h1 class="mb-0">Nuevo bien</h1>
+    <a class="btn btn-outline-secondary" href="bienes">Volver</a>
+</div>
+
+<div class="mb-3" style="max-width: 300px;">
+    <label class="form-label">Tipo de bien</label>
+    <select class="form-select" @bind="_tipo" @bind:after="LimpiarMensaje">
+        <option value="0">Elige el tipo...</option>
+        @foreach (var t in _tipos)
+        {
+            <option value="@t.Id">@t.Nombre</option>
+        }
+    </select>
+</div>
+
+@if (_mensaje is not null)
+{
+    <div class="alert @(_esError ? "alert-danger" : "alert-success")" style="max-width: 760px;">@_mensaje</div>
+}
+
+<div style="max-width: 760px;">
+    @* Un formulario por tipo, porque cada tipo tiene su propia tabla y sus propias reglas. *@
+    @switch ((TipoBien)_tipo)
+    {
+        case TipoBien.Vehiculo:
+            <EditForm Model="_vehiculo" OnValidSubmit="GuardarVehiculoAsync">
+                <DataAnnotationsValidator />
+                <div class="row g-3">
+                    <CampoTexto Etiqueta="Nombre del equipo" Ayuda="Vehículo pick up" @bind-Value="_vehiculo.Nombre" />
+                    <CampoTexto Etiqueta="Marca" @bind-Value="_vehiculo.Marca" />
+                    <CampoTexto Etiqueta="Modelo" Ayuda="RAM 700 2026" @bind-Value="_vehiculo.Modelo" />
+                    <CampoTexto Etiqueta="Número de serie" @bind-Value="_vehiculo.NumeroSerie" />
+                    <CampoTexto Etiqueta="Seguro (opcional)" @bind-Value="_vehiculo.Seguro" />
+                    <CampoTexto Etiqueta="Información adicional (opcional)" @bind-Value="_vehiculo.Caracteristica" />
+                </div>
+                <button type="submit" class="btn btn-primary mt-3">Guardar vehículo</button>
+            </EditForm>
+            break;
+
+        case TipoBien.Celular:
+            <EditForm Model="_celular" OnValidSubmit="GuardarCelularAsync">
+                <DataAnnotationsValidator />
+                <div class="row g-3">
+                    <CampoTexto Etiqueta="Marca" @bind-Value="_celular.Marca" />
+                    <CampoTexto Etiqueta="Modelo" @bind-Value="_celular.Modelo" />
+                    <CampoTexto Etiqueta="IMEI" Ayuda="15 dígitos" @bind-Value="_celular.Imei" />
+                    <CampoTexto Etiqueta="Número de línea (opcional)" @bind-Value="_celular.Numero" />
+                    <CampoTexto Etiqueta="RAM (opcional)" @bind-Value="_celular.Ram" />
+                    <CampoTexto Etiqueta="Memoria (opcional)" @bind-Value="_celular.Memoria" />
+                    <CampoTexto Etiqueta="Información adicional (opcional)" Clase="col-12" @bind-Value="_celular.Caracteristica" />
+                </div>
+                <button type="submit" class="btn btn-primary mt-3">Guardar celular</button>
+            </EditForm>
+            break;
+
+        case TipoBien.Laptop:
+            <EditForm Model="_laptop" OnValidSubmit="GuardarLaptopAsync">
+                <DataAnnotationsValidator />
+                <div class="row g-3">
+                    <CampoTexto Etiqueta="Marca" @bind-Value="_laptop.Marca" />
+                    <CampoTexto Etiqueta="Modelo" @bind-Value="_laptop.Modelo" />
+                    <CampoTexto Etiqueta="Número de serie" @bind-Value="_laptop.Serie" />
+                    <CampoTexto Etiqueta="RAM (opcional)" @bind-Value="_laptop.Ram" />
+                    <CampoTexto Etiqueta="Disco duro (opcional)" @bind-Value="_laptop.DiscoDuro" />
+                    <CampoTexto Etiqueta="Procesador (opcional)" @bind-Value="_laptop.Procesador" />
+                    <CampoTexto Etiqueta="Información adicional (opcional)" Clase="col-12" @bind-Value="_laptop.Caracteristica" />
+                </div>
+                <button type="submit" class="btn btn-primary mt-3">Guardar laptop</button>
+            </EditForm>
+            break;
+
+        case TipoBien.FondoFijo:
+            <EditForm Model="_fondo" OnValidSubmit="GuardarFondoAsync">
+                <DataAnnotationsValidator />
+                <div class="mb-3" style="max-width: 260px;">
+                    <label class="form-label">Monto</label>
+                    <InputNumber class="form-control" @bind-Value="_fondo.Monto" />
+                    <ValidationMessage For="() => _fondo.Monto" />
+                </div>
+                <button type="submit" class="btn btn-primary">Guardar fondo fijo</button>
+            </EditForm>
+            break;
+
+        case TipoBien.Otros:
+            <EditForm Model="_otro" OnValidSubmit="GuardarOtroAsync">
+                <DataAnnotationsValidator />
+                <div class="row g-3">
+                    <CampoTexto Etiqueta="Descripción" Clase="col-12" Ayuda="Impresora Epson L3250" @bind-Value="_otro.Caracteristica1" />
+                    <CampoTexto Etiqueta="Detalle (opcional)" @bind-Value="_otro.Caracteristica2" />
+                    <CampoTexto Etiqueta="Detalle adicional (opcional)" @bind-Value="_otro.Caracteristica3" />
+                </div>
+                <button type="submit" class="btn btn-primary mt-3">Guardar bien</button>
+            </EditForm>
+            break;
+    }
+</div>
+
+@code {
+    private IReadOnlyList<CatalogoDto> _tipos = [];
+    private int _tipo;
+
+    private NuevoVehiculoDto _vehiculo = new();
+    private NuevoCelularDto _celular = new();
+    private NuevoLaptopDto _laptop = new();
+    private NuevoFondoFijoDto _fondo = new();
+    private NuevoOtroBienDto _otro = new();
+
+    private string? _mensaje;
+    private bool _esError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _tipos = await RepositorioCatalogos.ObtenerTiposBienAsync();
+    }
+
+    private void LimpiarMensaje() => _mensaje = null;
+
+    private Task GuardarVehiculoAsync() =>
+        GuardarAsync(() => RepositorioBienes.CrearVehiculoAsync(_vehiculo), () => _vehiculo = new());
+
+    private Task GuardarCelularAsync() =>
+        GuardarAsync(() => RepositorioBienes.CrearCelularAsync(_celular), () => _celular = new());
+
+    private Task GuardarLaptopAsync() =>
+        GuardarAsync(() => RepositorioBienes.CrearLaptopAsync(_laptop), () => _laptop = new());
+
+    private Task GuardarFondoAsync() =>
+        GuardarAsync(() => RepositorioBienes.CrearFondoFijoAsync(_fondo), () => _fondo = new());
+
+    private Task GuardarOtroAsync() =>
+        GuardarAsync(() => RepositorioBienes.CrearOtroAsync(_otro), () => _otro = new());
+
+    // Los cinco formularios terminan igual: guardar, avisar el identificador y limpiar.
+    private async Task GuardarAsync(Func<Task<string>> crear, Action limpiar)
+    {
+        try
+        {
+            var identificador = await crear();
+            _mensaje = $"Bien {identificador} dado de alta y disponible para asignar.";
+            _esError = false;
+            limpiar();
+        }
+        catch (InvalidOperationException ex)
+        {
+            _mensaje = ex.Message;
+            _esError = true;
+        }
+    }
+}

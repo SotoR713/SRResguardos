@@ -1,0 +1,80 @@
+﻿@page "/configurar-acceso"
+@attribute [AllowAnonymous]
+@layout LayoutAcceso
+@using System.ComponentModel.DataAnnotations
+@using SRResguardos.Application.Interfaces.Seguridad
+@inject IServicioContrasena ServicioContrasena
+@inject IWebHostEnvironment Entorno
+
+<PageTitle>Configurar acceso</PageTitle>
+
+@if (!Entorno.IsDevelopment())
+{
+    <div class="alert alert-warning">Esta página solo está disponible en desarrollo.</div>
+}
+else
+{
+    <div class="card shadow-sm">
+        <div class="card-body p-4">
+            <h1 class="h5">Configurar la contraseña de acceso</h1>
+            <p class="text-muted small">
+                La contraseña no se guarda en ningún lado. Aquí solo se calcula su hash,
+                que pegarás en los secretos de usuario del proyecto.
+            </p>
+
+            <EditForm Model="Entrada" method="post" OnValidSubmit="Generar" FormName="configurar-acceso">
+                <DataAnnotationsValidator />
+
+                <div class="mb-3">
+                    <label class="form-label">Contraseña nueva</label>
+                    <InputText type="password" class="form-control" @bind-Value="Entrada!.Contrasena" />
+                    <ValidationMessage For="() => Entrada!.Contrasena" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Repítela</label>
+                    <InputText type="password" class="form-control" @bind-Value="Entrada!.Confirmacion" />
+                    <ValidationMessage For="() => Entrada!.Confirmacion" />
+                </div>
+
+                <button type="submit" class="btn btn-primary">Generar hash</button>
+            </EditForm>
+
+            @if (_hash is not null)
+            {
+                <hr />
+                <p class="small mb-2">
+                    En Visual Studio: clic derecho sobre <strong>SRResguardos.Web</strong>,
+                    <strong>Administrar secretos de usuario</strong>. Reemplaza el contenido por esto,
+                    guarda y reinicia la aplicación:
+                </p>
+                <pre class="bg-light border rounded p-2 small" style="white-space: pre-wrap; word-break: break-all;">@JsonSecretos</pre>
+                <a class="btn btn-outline-primary btn-sm" href="login">Ir al inicio de sesión</a>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [SupplyParameterFromForm]
+    private EntradaConfiguracion? Entrada { get; set; }
+
+    private string? _hash;
+
+    private string JsonSecretos =>
+        "{\n  \"Acceso\": {\n    \"HashContrasena\": \"" + _hash + "\"\n  }\n}";
+
+    protected override void OnInitialized() => Entrada ??= new();
+
+    private void Generar() => _hash = ServicioContrasena.GenerarHash(Entrada!.Contrasena);
+
+    private sealed class EntradaConfiguracion
+    {
+        [Required(ErrorMessage = "Escribe una contraseña.")]
+        [MinLength(8, ErrorMessage = "Usa al menos 8 caracteres.")]
+        public string Contrasena { get; set; } = string.Empty;
+
+        [Compare(nameof(Contrasena), ErrorMessage = "Las contraseñas no coinciden.")]
+        public string Confirmacion { get; set; } = string.Empty;
+    }
+}

@@ -1,5 +1,9 @@
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using SRResguardos.Application.Interfaces.Persistence;
+using SRResguardos.Application.Interfaces.Seguridad;
 using SRResguardos.Infrastructure.Persistence.Repositories;
+using SRResguardos.Infrastructure.Seguridad;
 using SRResguardos.Web.Components;
 
 namespace SRResguardos
@@ -14,8 +18,24 @@ namespace SRResguardos
             builder.Services.AddRazorComponents()
                 .AddInteractiveServerComponents();
 
+            // Acceso con una sola contraseña: al entrar se emite una cookie de sesión.
+            builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+                .AddCookie(opciones =>
+                {
+                    opciones.LoginPath = "/login";
+                    opciones.ExpireTimeSpan = TimeSpan.FromHours(8);
+                    opciones.SlidingExpiration = true;
+                });
+            builder.Services.AddAuthorization();
+            builder.Services.AddCascadingAuthenticationState();
+
+            // El hash de la contraseña viene de la configuración (secretos de usuario en desarrollo),
+            // nunca del appsettings.json que se sube al repositorio.
+            var hashContrasena = builder.Configuration["Acceso:HashContrasena"] ?? string.Empty;
+            builder.Services.AddSingleton<IServicioContrasena>(new ServicioContrasena(hashContrasena));
+
             var cadena = builder.Configuration.GetConnectionString("SRResguardosBD")
-            ?? throw new InvalidOperationException("Falta la cadena de conexión SRResguardosBD.");
+                ?? throw new InvalidOperationException("Falta la cadena de conexión SRResguardosBD.");
 
             builder.Services.AddScoped<IResguardoRepository>(_ => new ResguardoRepository(cadena));
             builder.Services.AddScoped<ICatalogoRepository>(_ => new CatalogoRepository(cadena));
@@ -35,11 +55,19 @@ namespace SRResguardos
             app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
             app.UseHttpsRedirection();
 
+            app.UseAuthentication();
+            app.UseAuthorization();
             app.UseAntiforgery();
 
             app.MapStaticAssets();
             app.MapRazorComponents<App>()
                 .AddInteractiveServerRenderMode();
+
+            app.MapPost("/logout", async (HttpContext contexto) =>
+            {
+                await contexto.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                return Results.Redirect("/login");
+            });
 
             app.Run();
         }

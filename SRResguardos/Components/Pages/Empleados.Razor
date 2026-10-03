@@ -2,8 +2,10 @@
 @rendermode InteractiveServer
 @using SRResguardos.Application.DTOs
 @using SRResguardos.Application.Interfaces.Persistence
+@using SRResguardos.Domain.Enums
 @inject IEmpleadoRepository RepositorioEmpleados
 @inject ICatalogoRepository RepositorioCatalogos
+@inject IJSRuntime JS
 
 <PageTitle>Empleados</PageTitle>
 
@@ -36,15 +38,13 @@
 
             <button type="submit" class="btn btn-primary">Guardar</button>
         </EditForm>
-
-        @if (_mensaje is not null)
-        {
-            <div class="alert @(_esError ? "alert-danger" : "alert-success") mt-3 mb-0">
-                @_mensaje
-            </div>
-        }
     </div>
 </div>
+
+@if (_mensaje is not null)
+{
+    <div class="alert @(_esError ? "alert-danger" : "alert-success")">@_mensaje</div>
+}
 
 @if (_empleados is null)
 {
@@ -52,25 +52,46 @@
 }
 else
 {
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Nombre</th>
-                <th>Puesto</th>
-                <th>Estatus</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var emp in _empleados)
-            {
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
                 <tr>
-                    <td>@emp.Nombre</td>
-                    <td>@emp.Puesto</td>
-                    <td>@emp.Estatus</td>
+                    <th>Nombre</th>
+                    <th>Puesto</th>
+                    <th>Estatus</th>
+                    <th class="text-center">Resguardos activos</th>
+                    <th>Acciones</th>
                 </tr>
-            }
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                @foreach (var emp in _empleados)
+                {
+                    var activo = emp.EstatusId == (int)EstatusEmpleado.Activo;
+
+                    <tr class="@(activo ? "" : "text-muted")">
+                        <td><a href="empleados/@emp.Id">@emp.Nombre</a></td>
+                        <td>@emp.Puesto</td>
+                        <td>@emp.Estatus</td>
+                        <td class="text-center">@emp.ResguardosActivos</td>
+                        <td>
+                            @if (!activo)
+                            {
+                                <button class="btn btn-sm btn-outline-success" @onclick="() => ActivarAsync(emp)">Activar</button>
+                            }
+                            else if (emp.ResguardosActivos == 0)
+                            {
+                                <button class="btn btn-sm btn-outline-secondary" @onclick="() => InactivarAsync(emp)">Inactivar</button>
+                            }
+                            else
+                            {
+                                <span class="small text-muted">Con bienes asignados</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 }
 
 @code {
@@ -96,15 +117,50 @@ else
         try
         {
             await RepositorioEmpleados.CrearAsync(_nuevo);
-            _mensaje = $"Empleado '{_nuevo.Nombre.Trim()}' dado de alta.";
-            _esError = false;
+            Avisar($"Empleado '{_nuevo.Nombre.Trim()}' dado de alta.", false);
             _nuevo = new();
             await CargarAsync();
         }
         catch (InvalidOperationException ex)
         {
-            _mensaje = ex.Message;
-            _esError = true;
+            Avisar(ex.Message, true);
         }
     }
-}   
+
+    private async Task ActivarAsync(EmpleadoListaDto emp)
+    {
+        try
+        {
+            await RepositorioEmpleados.ActivarAsync(emp.Id);
+            Avisar($"{emp.Nombre} está activo.", false);
+            await CargarAsync();
+        }
+        catch (InvalidOperationException ex)
+        {
+            Avisar(ex.Message, true);
+        }
+    }
+
+    private async Task InactivarAsync(EmpleadoListaDto emp)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"¿Inactivar a {emp.Nombre}?"))
+            return;
+
+        try
+        {
+            await RepositorioEmpleados.InactivarAsync(emp.Id);
+            Avisar($"{emp.Nombre} quedó inactivo.", false);
+            await CargarAsync();
+        }
+        catch (InvalidOperationException ex)
+        {
+            Avisar(ex.Message, true);
+        }
+    }
+
+    private void Avisar(string texto, bool esError)
+    {
+        _mensaje = texto;
+        _esError = esError;
+    }
+}

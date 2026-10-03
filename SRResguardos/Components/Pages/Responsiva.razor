@@ -2,6 +2,7 @@
 @using System.Globalization
 @using SRResguardos.Application.DTOs
 @using SRResguardos.Application.Interfaces.Persistence
+@using SRResguardos.Domain.Enums
 @inject IResguardoRepository RepositorioResguardos
 
 <PageTitle>Responsiva @_responsiva?.NumeroSerie</PageTitle>
@@ -22,7 +23,7 @@ else
     </div>
 
     <div class="responsiva">
-        @if (_responsiva.EstadoResguardo != "Activo")
+        @if (_responsiva.EstadoResguardoId != (int)EstadoResguardo.Activo)
         {
             <div class="aviso-estado">RESGUARDO @_responsiva.EstadoResguardo.ToUpper()</div>
         }

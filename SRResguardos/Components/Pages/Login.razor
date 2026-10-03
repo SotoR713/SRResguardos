@@ -1,0 +1,98 @@
+﻿@page "/login"
+@attribute [AllowAnonymous]
+@layout LayoutAcceso
+@using System.ComponentModel.DataAnnotations
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using SRResguardos.Application.Interfaces.Seguridad
+@inject IServicioContrasena ServicioContrasena
+@inject NavigationManager Navegacion
+@inject IWebHostEnvironment Entorno
+
+@* Esta página NO es interactiva a propósito: para escribir la cookie de sesión
+   hace falta la respuesta HTTP, y eso solo existe en el renderizado estático. *@
+
+<PageTitle>Iniciar sesión</PageTitle>
+
+<div class="card shadow-sm">
+    <div class="card-body p-4">
+        <h1 class="h5 mb-3">Iniciar sesión</h1>
+
+        @if (!ServicioContrasena.EstaConfigurada)
+        {
+            <div class="alert alert-warning small">
+                Todavía no hay una contraseña configurada.
+                @if (Entorno.IsDevelopment())
+                {
+                    <span>Créala en <a href="configurar-acceso">Configurar acceso</a>.</span>
+                }
+            </div>
+        }
+
+        <EditForm Model="Entrada" method="post" OnValidSubmit="IniciarSesionAsync" FormName="login">
+            <DataAnnotationsValidator />
+
+            <div class="mb-3">
+                <label class="form-label" for="contrasena">Contraseña</label>
+                <InputText id="contrasena" type="password" class="form-control" @bind-Value="Entrada!.Contrasena" />
+                <ValidationMessage For="() => Entrada!.Contrasena" />
+            </div>
+
+            @if (_error is not null)
+            {
+                <div class="alert alert-danger py-2">@_error</div>
+            }
+
+            <button type="submit" class="btn btn-primary w-100">Entrar</button>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromForm]
+    private EntradaLogin? Entrada { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
+
+    private string? _error;
+
+    protected override void OnInitialized() => Entrada ??= new();
+
+    private async Task IniciarSesionAsync()
+    {
+        if (!ServicioContrasena.Verificar(Entrada!.Contrasena))
+        {
+            _error = "Contraseña incorrecta.";
+            return;
+        }
+
+        var identidad = new ClaimsIdentity(
+            [new Claim(ClaimTypes.Name, "Administrador")],
+            CookieAuthenticationDefaults.AuthenticationScheme);
+
+        await HttpContext.SignInAsync(
+            CookieAuthenticationDefaults.AuthenticationScheme,
+            new ClaimsPrincipal(identidad));
+
+        Navegacion.NavigateTo(EsRutaLocal(ReturnUrl) ? ReturnUrl! : "/");
+    }
+
+    // Solo se regresa a rutas de esta misma aplicación. Sin esta revisión, alguien podría
+    // mandar un enlace con ReturnUrl=https://sitio-falso.com y usar tu login para redirigir.
+    private static bool EsRutaLocal(string? url) =>
+        !string.IsNullOrEmpty(url)
+        && url.StartsWith('/')
+        && !url.StartsWith("//")
+        && !url.StartsWith("/\\");
+
+    private sealed class EntradaLogin
+    {
+        [Required(ErrorMessage = "Escribe la contraseña.")]
+        public string Contrasena { get; set; } = string.Empty;
+    }
+}

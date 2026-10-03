@@ -1,0 +1,80 @@
+﻿@page "/empleados/{Id:int}"
+@using SRResguardos.Application.DTOs
+@using SRResguardos.Application.Interfaces.Persistence
+@using SRResguardos.Domain.Enums
+@inject IEmpleadoRepository RepositorioEmpleados
+@inject IResguardoRepository RepositorioResguardos
+
+@* Página de solo lectura: no necesita @rendermode, se dibuja una vez en el servidor. *@
+
+<PageTitle>@(_empleado?.Nombre ?? "Empleado")</PageTitle>
+
+@if (_cargando)
+{
+    <p>Cargando...</p>
+}
+else if (_empleado is null)
+{
+    <p>No existe el empleado solicitado.</p>
+    <a href="empleados">Volver a empleados</a>
+}
+else
+{
+    <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+            <h1 class="mb-1">@_empleado.Nombre</h1>
+            <div class="text-muted">@_empleado.Puesto · @_empleado.Estatus</div>
+        </div>
+        <div class="text-nowrap">
+            <a class="btn btn-outline-secondary" href="empleados">Volver</a>
+            <a class="btn btn-primary" href="@($"resguardos/nuevo?Colaborador={Uri.EscapeDataString(_empleado.Nombre)}")">
+                Asignar un bien
+            </a>
+        </div>
+    </div>
+
+    <h2 class="h5">Bienes a su cargo</h2>
+    @if (Activos.Count == 0)
+    {
+        <p class="text-muted">No tiene bienes asignados.</p>
+    }
+    else
+    {
+        <TablaResguardos Resguardos="Activos" />
+    }
+
+    <h2 class="h5 mt-4">Historial</h2>
+    @if (Historial.Count == 0)
+    {
+        <p class="text-muted">Sin resguardos anteriores.</p>
+    }
+    else
+    {
+        <TablaResguardos Resguardos="Historial" />
+    }
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private EmpleadoListaDto? _empleado;
+    private IReadOnlyList<ResguardoListaDto> _resguardos = [];
+    private bool _cargando = true;
+
+    private List<ResguardoListaDto> Activos =>
+        _resguardos.Where(r => r.EstadoResguardoId == (int)EstadoResguardo.Activo).ToList();
+
+    private List<ResguardoListaDto> Historial =>
+        _resguardos.Where(r => r.EstadoResguardoId != (int)EstadoResguardo.Activo).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _empleado = await RepositorioEmpleados.ObtenerPorIdAsync(Id);
+
+        if (_empleado is not null)
+            _resguardos = await RepositorioResguardos.ObtenerListaAsync(colaboradorId: Id);
+
+        _cargando = false;
+    }
+}

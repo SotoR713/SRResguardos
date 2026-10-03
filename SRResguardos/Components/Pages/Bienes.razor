@@ -1,0 +1,140 @@
+﻿@page "/bienes"
+@rendermode InteractiveServer
+@using SRResguardos.Application.DTOs
+@using SRResguardos.Application.Interfaces.Persistence
+@using SRResguardos.Domain.Enums
+@inject IBienRepository RepositorioBienes
+@inject IJSRuntime JS
+
+<PageTitle>Bienes</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Bienes</h1>
+    <a class="btn btn-primary" href="bienes/nuevo">Nuevo bien</a>
+</div>
+
+<div class="mb-3" style="max-width: 300px;">
+    <label class="form-label">Filtrar por estado</label>
+    <select class="form-select" @bind="_filtro">
+        <option value="0">Todos</option>
+        <option value="@((int)EstadoBien.Disponible)">Disponible</option>
+        <option value="@((int)EstadoBien.Asignado)">Asignado</option>
+        <option value="@((int)EstadoBien.Mantenimiento)">Mantenimiento</option>
+        <option value="@((int)EstadoBien.Baja)">Baja</option>
+    </select>
+</div>
+
+@if (_mensaje is not null)
+{
+    <div class="alert @(_esError ? "alert-danger" : "alert-success")">@_mensaje</div>
+}
+
+@if (_bienes is null)
+{
+    <p>Cargando...</p>
+}
+else
+{
+    <p>@Visibles.Count() bien(es)</p>
+
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th>Identificador</th>
+                    <th>Tipo</th>
+                    <th>Descripción</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var b in Visibles)
+                {
+                    var estado = (EstadoBien)b.EstadoId;
+
+                    <tr>
+                        <td>@b.Identificador</td>
+                        <td>@b.TipoBien</td>
+                        <td>@b.Descripcion</td>
+                        <td><span class="badge @ClaseEstado(estado)">@b.Estado</span></td>
+                        <td class="text-nowrap">
+                            @if (estado is EstadoBien.Disponible or EstadoBien.Asignado)
+                            {
+                                <button class="btn btn-sm btn-outline-warning" @onclick="() => MantenimientoAsync(b)">Mantenimiento</button>
+                            }
+                            @if (estado == EstadoBien.Mantenimiento)
+                            {
+                                <button class="btn btn-sm btn-outline-success" @onclick="() => TerminarAsync(b)">Terminar mantenimiento</button>
+                            }
+                            @if (estado is EstadoBien.Disponible or EstadoBien.Mantenimiento)
+                            {
+                                <button class="btn btn-sm btn-outline-danger ms-1" @onclick="() => BajaAsync(b)">Dar de baja</button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private IReadOnlyList<BienBusquedaDto>? _bienes;
+    private int _filtro;
+    private string? _mensaje;
+    private bool _esError;
+
+    // El filtro se aplica en memoria: la lista ya está cargada y es pequeña.
+    private IEnumerable<BienBusquedaDto> Visibles =>
+        (_bienes ?? []).Where(b => _filtro == 0 || b.EstadoId == _filtro);
+
+    protected override async Task OnInitializedAsync() => await CargarAsync();
+
+    private async Task CargarAsync()
+    {
+        _bienes = await RepositorioBienes.ObtenerParaBusquedaAsync();
+    }
+
+    private static string ClaseEstado(EstadoBien estado) => estado switch
+    {
+        EstadoBien.Disponible => "bg-success",
+        EstadoBien.Asignado => "bg-primary",
+        EstadoBien.Mantenimiento => "bg-warning text-dark",
+        _ => "bg-secondary"
+    };
+
+    private Task MantenimientoAsync(BienBusquedaDto b) => EjecutarAsync(
+        null,
+        () => RepositorioBienes.EnviarAMantenimientoAsync(b.Identificador),
+        $"{b.Identificador} enviado a mantenimiento.");
+
+    private Task TerminarAsync(BienBusquedaDto b) => EjecutarAsync(
+        null,
+        () => RepositorioBienes.TerminarMantenimientoAsync(b.Identificador),
+        $"{b.Identificador} salió de mantenimiento.");
+
+    private Task BajaAsync(BienBusquedaDto b) => EjecutarAsync(
+        $"¿Dar de baja {b.Identificador} ({b.Descripcion})? Esta acción no se puede deshacer.",
+        () => RepositorioBienes.DarDeBajaAsync(b.Identificador),
+        $"{b.Identificador} dado de baja.");
+
+    private async Task EjecutarAsync(string? pregunta, Func<Task> accion, string mensajeExito)
+    {
+        if (pregunta is not null && !await JS.InvokeAsync<bool>("confirm", pregunta))
+            return;
+
+        try
+        {
+            await accion();
+            _mensaje = mensajeExito;
+            _esError = false;
+            await CargarAsync();
+        }
+        catch (InvalidOperationException ex)
+        {
+            _mensaje = ex.Message;
+            _esError = true;
+        }
+    }
+}

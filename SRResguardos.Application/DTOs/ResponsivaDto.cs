@@ -12,5 +12,6 @@ public class ResponsivaDto
     public string IdentificadorBien { get; set; } = string.Empty;
     public string Notas { get; set; } = string.Empty;
     public string EstadoResguardo { get; set; } = string.Empty;
+    public int EstadoResguardoId { get; set; }
     public List<CaracteristicaDto> Caracteristicas { get; set; } = [];
 }

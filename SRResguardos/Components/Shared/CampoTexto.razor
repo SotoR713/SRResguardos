@@ -1,0 +1,26 @@
+﻿@using System.Linq.Expressions
+
+@* Campo de texto reutilizable: etiqueta, caja y mensaje de validación en una sola pieza.
+   Se usa con @bind-Value igual que un InputText. *@
+<div class="@Clase">
+    <label class="form-label">@Etiqueta</label>
+    <InputText class="form-control"
+               Value="@Value"
+               ValueChanged="@ValueChanged"
+               ValueExpression="@ValueExpression"
+               placeholder="@Ayuda" />
+    @if (ValueExpression is not null)
+    {
+        <ValidationMessage For="@ValueExpression" />
+    }
+</div>
+
+@code {
+    [Parameter] public string Etiqueta { get; set; } = string.Empty;
+    [Parameter] public string? Ayuda { get; set; }
+    [Parameter] public string Clase { get; set; } = "col-md-6";
+
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+    [Parameter] public Expression<Func<string?>>? ValueExpression { get; set; }
+}

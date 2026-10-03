@@ -7,4 +7,5 @@ public class EmpleadoListaDto
     public string Puesto { get; set; } = string.Empty;
     public string Estatus { get; set; } = string.Empty;
     public int EstatusId { get; set; }
+    public int ResguardosActivos { get; set; }
 }

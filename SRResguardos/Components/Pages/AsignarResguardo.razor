@@ -1,0 +1,351 @@
+﻿@page "/resguardos/nuevo"
+@rendermode InteractiveServer
+@using SRResguardos.Application.DTOs
+@using SRResguardos.Application.Interfaces.Persistence
+@using SRResguardos.Domain.Enums
+@inject IResguardoRepository RepositorioResguardos
+@inject IEmpleadoRepository RepositorioEmpleados
+@inject IBienRepository RepositorioBienes
+@inject ICatalogoRepository RepositorioCatalogos
+@inject NavigationManager Navegacion
+
+<PageTitle>Asignar resguardo</PageTitle>
+
+<h1>Asignar resguardo</h1>
+
+@if (_cargando)
+{
+    <p>Cargando...</p>
+}
+else
+{
+    <EditForm Model="_nuevo" OnValidSubmit="AsignarAsync" style="max-width: 680px;">
+        <DataAnnotationsValidator />
+
+        @* ---------------- Colaborador: buscador ---------------- *@
+        <div class="mb-3">
+            <label class="form-label">Colaborador que recibe</label>
+            <input class="form-control" list="lista-empleados" placeholder="Empieza a escribir el nombre..."
+                   @bind="_textoColaborador" @bind:after="ResolverColaborador" />
+            <datalist id="lista-empleados">
+                @foreach (var e in _empleados)
+                {
+                    <option value="@e.Nombre">@e.Puesto · @e.Estatus</option>
+                }
+            </datalist>
+            <ValidationMessage For="() => _nuevo.ColaboradorId" />
+
+            @switch (_estadoColaborador)
+            {
+                case EstadoBusqueda.Encontrado:
+                    <div class="form-text text-success">Puesto: @_colaborador!.Puesto</div>
+                    break;
+
+                case EstadoBusqueda.Inactivo:
+                    <div class="alert alert-warning mt-2 mb-0 d-flex align-items-center justify-content-between">
+                        <span>@_colaborador!.Nombre está inactivo. Actívalo antes de asignarle un bien.</span>
+                        <button type="button" class="btn btn-sm btn-warning ms-2" @onclick="ActivarColaboradorAsync">Activar</button>
+                    </div>
+                    break;
+
+                case EstadoBusqueda.NoExiste:
+                    <div class="alert alert-info mt-2 mb-0">
+                        <div class="mb-2">No existe un empleado llamado "@_textoColaborador.Trim()". Elige su puesto para crearlo:</div>
+                        <div class="d-flex gap-2">
+                            <select class="form-select" @bind="_puestoNuevoColaborador">
+                                <option value="0">Elige un puesto...</option>
+                                @foreach (var p in _puestos)
+                                {
+                                    <option value="@p.Id">@p.Nombre</option>
+                                }
+                            </select>
+                            <button type="button" class="btn btn-primary text-nowrap" @onclick="CrearColaboradorAsync">Crear empleado</button>
+                        </div>
+                    </div>
+                    break;
+
+                case EstadoBusqueda.Varios:
+                    <div class="alert alert-warning mt-2 mb-0">
+                        Hay varios empleados con ese nombre exacto y no se pueden distinguir.
+                    </div>
+                    break;
+            }
+        </div>
+
+        @* ---------------- Quién entrega ---------------- *@
+        <div class="mb-3">
+            <label class="form-label">Quién entrega</label>
+            <InputSelect class="form-select" @bind-Value="_nuevo.EntregaId">
+                <option value="0">Elige quién entrega...</option>
+                @foreach (var e in EmpleadosActivos)
+                {
+                    <option value="@e.Id">@e.Nombre (@e.Puesto)</option>
+                }
+            </InputSelect>
+            <ValidationMessage For="() => _nuevo.EntregaId" />
+        </div>
+
+        @* ---------------- Bien: buscador ---------------- *@
+        <div class="mb-3">
+            <label class="form-label">Bien</label>
+            <input class="form-control" list="lista-bienes" placeholder="Escribe el identificador, por ejemplo 3-3..."
+                   @bind="_textoBien" @bind:after="ResolverBien" />
+            <datalist id="lista-bienes">
+                @foreach (var b in BienesDisponibles)
+                {
+                    <option value="@b.Identificador">@b.TipoBien · @b.Descripcion</option>
+                }
+            </datalist>
+            <ValidationMessage For="() => _nuevo.IdentificadorBien" />
+
+            @switch (_estadoBien)
+            {
+                case EstadoBusqueda.Encontrado:
+                    <div class="form-text text-success">@_bien!.TipoBien · @_bien.Descripcion</div>
+                    break;
+
+                case EstadoBusqueda.NoDisponible:
+                    <div class="alert alert-danger mt-2 mb-0">
+                        El bien debe estar disponible. @_bien!.Identificador se encuentra en estado <strong>@_bien.Estado</strong>.
+                    </div>
+                    break;
+
+                case EstadoBusqueda.NoExiste:
+                    <div class="alert alert-danger mt-2 mb-0">No existe un bien con el identificador "@_textoBien.Trim()".</div>
+                    break;
+            }
+        </div>
+
+        @* ---------------- Fecha y notas ---------------- *@
+        <div class="mb-3" style="max-width: 220px;">
+            <label class="form-label">Fecha</label>
+            <InputDate class="form-control" @bind-Value="_nuevo.Fecha" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Notas</label>
+            <InputTextArea class="form-control" rows="3" @bind-Value="_nuevo.Notas"
+                           placeholder="Condición del equipo, accesorios que se entregan..." />
+            <ValidationMessage For="() => _nuevo.Notas" />
+        </div>
+
+        @if (_error is not null)
+        {
+            <div class="alert alert-danger">@_error</div>
+        }
+
+        <button type="submit" class="btn btn-primary" disabled="@_guardando">
+            @(_guardando ? "Asignando..." : "Asignar e imprimir responsiva")
+        </button>
+    </EditForm>
+}
+
+@code {
+    // Permite llegar con el colaborador ya escrito, desde la ficha del empleado.
+    [SupplyParameterFromQuery]
+    public string? Colaborador { get; set; }
+
+    private enum EstadoBusqueda { Vacio, Encontrado, Inactivo, NoExiste, Varios, NoDisponible }
+
+    private readonly NuevoResguardoDto _nuevo = new() { Fecha = DateOnly.FromDateTime(DateTime.Today) };
+
+    private IReadOnlyList<EmpleadoListaDto> _empleados = [];
+    private IReadOnlyList<BienBusquedaDto> _bienes = [];
+    private IReadOnlyList<CatalogoDto> _puestos = [];
+
+    private bool _cargando = true;
+    private bool _guardando;
+    private string? _error;
+
+    private string _textoColaborador = string.Empty;
+    private EstadoBusqueda _estadoColaborador;
+    private EmpleadoListaDto? _colaborador;
+    private int _puestoNuevoColaborador;
+
+    private string _textoBien = string.Empty;
+    private EstadoBusqueda _estadoBien;
+    private BienBusquedaDto? _bien;
+
+    private IEnumerable<EmpleadoListaDto> EmpleadosActivos =>
+        _empleados.Where(e => e.EstatusId == (int)EstatusEmpleado.Activo);
+
+    private IEnumerable<BienBusquedaDto> BienesDisponibles =>
+        _bienes.Where(b => b.EstadoId == (int)EstadoBien.Disponible);
+
+    protected override async Task OnInitializedAsync()
+    {
+        _puestos = await RepositorioCatalogos.ObtenerPuestosAsync();
+        await RecargarAsync();
+
+        if (!string.IsNullOrWhiteSpace(Colaborador))
+        {
+            _textoColaborador = Colaborador;
+            ResolverColaborador();
+        }
+
+        _cargando = false;
+    }
+
+    private async Task RecargarAsync()
+    {
+        _empleados = await RepositorioEmpleados.ObtenerListaAsync();
+        _bienes = await RepositorioBienes.ObtenerParaBusquedaAsync();
+    }
+
+    // Se ejecuta al salir del campo del colaborador.
+    private void ResolverColaborador()
+    {
+        _nuevo.ColaboradorId = 0;
+        _colaborador = null;
+
+        var texto = _textoColaborador.Trim();
+
+        if (texto.Length == 0)
+        {
+            _estadoColaborador = EstadoBusqueda.Vacio;
+            return;
+        }
+
+        var coincidencias = _empleados
+            .Where(e => string.Equals(e.Nombre, texto, StringComparison.InvariantCultureIgnoreCase))
+            .ToList();
+
+        if (coincidencias.Count == 0)
+        {
+            _estadoColaborador = EstadoBusqueda.NoExiste;
+            return;
+        }
+
+        if (coincidencias.Count > 1)
+        {
+            _estadoColaborador = EstadoBusqueda.Varios;
+            return;
+        }
+
+        _colaborador = coincidencias[0];
+
+        if (_colaborador.EstatusId != (int)EstatusEmpleado.Activo)
+        {
+            _estadoColaborador = EstadoBusqueda.Inactivo;
+            return;
+        }
+
+        _estadoColaborador = EstadoBusqueda.Encontrado;
+        _nuevo.ColaboradorId = _colaborador.Id;
+    }
+
+    private async Task ActivarColaboradorAsync()
+    {
+        if (_colaborador is null)
+            return;
+
+        _error = null;
+
+        try
+        {
+            await RepositorioEmpleados.ActivarAsync(_colaborador.Id);
+            await RecargarAsync();
+            ResolverColaborador();
+        }
+        catch (InvalidOperationException ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    private async Task CrearColaboradorAsync()
+    {
+        _error = null;
+
+        var nombre = _textoColaborador.Trim();
+
+        if (_puestoNuevoColaborador <= 0)
+        {
+            _error = "Elige el puesto del empleado nuevo.";
+            return;
+        }
+
+        if (nombre.Length > 50)
+        {
+            _error = "El nombre no puede pasar de 50 caracteres.";
+            return;
+        }
+
+        try
+        {
+            await RepositorioEmpleados.CrearAsync(new NuevoEmpleadoDto
+            {
+                Nombre = nombre,
+                PuestoId = _puestoNuevoColaborador
+            });
+
+            _puestoNuevoColaborador = 0;
+            await RecargarAsync();
+            ResolverColaborador();
+        }
+        catch (InvalidOperationException ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    // Se ejecuta al salir del campo del bien.
+    private void ResolverBien()
+    {
+        _nuevo.IdentificadorBien = string.Empty;
+
+        var texto = _textoBien.Trim();
+
+        if (texto.Length == 0)
+        {
+            _bien = null;
+            _estadoBien = EstadoBusqueda.Vacio;
+            return;
+        }
+
+        _bien = _bienes.FirstOrDefault(b =>
+            string.Equals(b.Identificador, texto, StringComparison.OrdinalIgnoreCase));
+
+        if (_bien is null)
+        {
+            _estadoBien = EstadoBusqueda.NoExiste;
+            return;
+        }
+
+        if (_bien.EstadoId != (int)EstadoBien.Disponible)
+        {
+            _estadoBien = EstadoBusqueda.NoDisponible;
+            return;
+        }
+
+        _estadoBien = EstadoBusqueda.Encontrado;
+        _nuevo.IdentificadorBien = _bien.Identificador;
+    }
+
+    private async Task AsignarAsync()
+    {
+        _error = null;
+        _guardando = true;
+
+        try
+        {
+            var id = await RepositorioResguardos.AsignarAsync(_nuevo);
+
+            // Al terminar, directo a la responsiva para imprimirla y firmarla.
+            Navegacion.NavigateTo($"resguardos/{id}/responsiva");
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Alguien pudo cambiar algo mientras capturabas: se recargan los datos
+            // y se vuelven a revisar el colaborador y el bien.
+            _error = ex.Message;
+            await RecargarAsync();
+            ResolverColaborador();
+            ResolverBien();
+        }
+        finally
+        {
+            _guardando = false;
+        }
+    }
+}

@@ -1,0 +1,37 @@
+﻿@using SRResguardos.Application.DTOs
+
+@* Tabla de resguardos reutilizable, de solo lectura. *@
+<div class="table-responsive">
+    <table class="table table-sm align-middle">
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Folio</th>
+                <th>Tipo</th>
+                <th>Bien</th>
+                <th>Estado</th>
+                <th>Estado del bien</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var r in Resguardos)
+            {
+                <tr>
+                    <td>@r.Fecha.ToString("dd/MM/yyyy")</td>
+                    <td>@r.NumeroSerie</td>
+                    <td>@r.TipoBien</td>
+                    <td>@r.IdentificadorBien</td>
+                    <td>@r.EstadoResguardo</td>
+                    <td>@r.EstadoBien</td>
+                    <td><a href="resguardos/@r.Id/responsiva">Ver responsiva</a></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ResguardoListaDto> Resguardos { get; set; } = [];
+}

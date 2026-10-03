@@ -1,0 +1,18 @@
+﻿@* Tarjeta con un número grande, para la página de inicio. *@
+<div class="col-6 col-md-4 col-lg">
+    <a href="@Enlace" class="text-decoration-none">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="small text-muted">@Titulo</div>
+                <div class="display-6 fw-semibold @Clase">@Valor</div>
+            </div>
+        </div>
+    </a>
+</div>
+
+@code {
+    [Parameter] public string Titulo { get; set; } = string.Empty;
+    [Parameter] public int Valor { get; set; }
+    [Parameter] public string Clase { get; set; } = string.Empty;
+    [Parameter] public string Enlace { get; set; } = string.Empty;
+}
