@@ -17,6 +17,9 @@ public class CatalogoRepository : ICatalogoRepository
     public Task<IReadOnlyList<CatalogoDto>> ObtenerEstadosResguardoAsync()
         => ConsultarAsync("SELECT Id, Nombre FROM EstadosResguardo ORDER BY Id;");
 
+    public Task<IReadOnlyList<CatalogoDto>> ObtenerEstadosBienesAsync()
+        => ConsultarAsync("SELECT Id, Nombre FROM EstadosBienes ORDER BY Id;");
+
     public Task<IReadOnlyList<CatalogoDto>> ObtenerPuestosAsync()
         => ConsultarAsync("SELECT Id, Nombre FROM Puestos ORDER BY Nombre;");
 

@@ -4,25 +4,27 @@
 @using SRResguardos.Application.Interfaces.Persistence
 @using SRResguardos.Domain.Enums
 @inject IBienRepository RepositorioBienes
+@inject ICatalogoRepository RepositorioCatalogos
 @inject IJSRuntime JS
 
 <PageTitle>Bienes</PageTitle>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="mb-0">Bienes</h1>
+<div class="cabecera-lista">
+    <div>
+        <h1>Bienes</h1>
+        @if (_bienes is not null)
+        {
+            <p class="resumen">@Resumen</p>
+        }
+    </div>
     <a class="btn btn-primary" href="bienes/nuevo">Nuevo bien</a>
 </div>
 
-<div class="mb-3" style="max-width: 300px;">
-    <label class="form-label">Filtrar por estado</label>
-    <select class="form-select" @bind="_filtro">
-        <option value="0">Todos</option>
-        <option value="@((int)EstadoBien.Disponible)">Disponible</option>
-        <option value="@((int)EstadoBien.Asignado)">Asignado</option>
-        <option value="@((int)EstadoBien.Mantenimiento)">Mantenimiento</option>
-        <option value="@((int)EstadoBien.Baja)">Baja</option>
-    </select>
-</div>
+<Buscador @bind-Texto="_busqueda"
+          Ayuda="Busca por identificador, marca, modelo, serie, IMEI o teléfono"
+          Etiqueta="Buscar bienes" />
+
+<FiltroEstados Opciones="OpcionesFiltro" @bind-Elegido="_estadoId" />
 
 @if (_mensaje is not null)
 {
@@ -31,34 +33,70 @@
 
 @if (_bienes is null)
 {
-    <p>Cargando...</p>
+    <p class="text-muted">Cargando bienes...</p>
+}
+else if (_bienes.Count == 0)
+{
+    <div class="vacio">
+        <p>Todavía no hay bienes registrados.</p>
+        <a class="btn btn-primary" href="bienes/nuevo">Registrar el primero</a>
+    </div>
+}
+else if (!Visibles.Any())
+{
+    <div class="vacio">
+        @if (_busqueda.Trim().Length > 0)
+        {
+            <p>Ningún bien coincide con «@_busqueda.Trim()». Prueba con parte de la serie, el IMEI, el modelo o el identificador.</p>
+            <button type="button" class="btn btn-outline-primary" @onclick="() => _busqueda = string.Empty">Limpiar búsqueda</button>
+        }
+        else
+        {
+            <p>No hay bienes en este estado.</p>
+            <button type="button" class="btn btn-outline-primary" @onclick="() => _estadoId = null">Ver todos</button>
+        }
+    </div>
 }
 else
 {
-    <p>@Visibles.Count() bien(es)</p>
-
-    <div class="table-responsive">
-        <table class="table align-middle">
+    <div class="tabla-contenedor">
+        <table class="tabla">
             <thead>
                 <tr>
-                    <th>Identificador</th>
-                    <th>Tipo</th>
-                    <th>Descripción</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
+                    <th scope="col">Identificador</th>
+                    <th scope="col">Equipo</th>
+                    <th scope="col">Datos de identificación</th>
+                    <th scope="col">Estado</th>
+                    <th scope="col"><span class="visually-hidden">Acciones</span></th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var b in Visibles)
                 {
                     var estado = (EstadoBien)b.EstadoId;
+                    var datos = Identificacion(b).ToList();
 
                     <tr>
-                        <td>@b.Identificador</td>
-                        <td>@b.TipoBien</td>
-                        <td>@b.Descripcion</td>
+                        <td><span class="principal numero">@b.Identificador</span></td>
+                        <td>
+                            <span class="principal">@b.Descripcion</span>
+                            <span class="secundario">@b.TipoBien</span>
+                        </td>
+                        <td>
+                            @if (datos.Count == 0)
+                            {
+                                <span class="sin-datos">Sin serie</span>
+                            }
+                            @foreach (var (etiqueta, valor) in datos)
+                            {
+                                <span class="dato">
+                                    <span class="dato-etiqueta">@etiqueta</span>
+                                    <span class="numero">@valor</span>
+                                </span>
+                            }
+                        </td>
                         <td><span class="estado @ClaseEstado(estado)">@b.Estado</span></td>
-                        <td class="text-nowrap">
+                        <td class="acciones">
                             @if (estado is EstadoBien.Disponible or EstadoBien.Asignado)
                             {
                                 <button class="btn btn-sm btn-outline-warning" @onclick="() => MantenimientoAsync(b)">Mantenimiento</button>
@@ -69,7 +107,7 @@ else
                             }
                             @if (estado is EstadoBien.Disponible or EstadoBien.Mantenimiento)
                             {
-                                <button class="btn btn-sm btn-outline-danger ms-1" @onclick="() => BajaAsync(b)">Dar de baja</button>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => BajaAsync(b)">Dar de baja</button>
                             }
                         </td>
                     </tr>
@@ -81,19 +119,74 @@ else
 
 @code {
     private IReadOnlyList<BienBusquedaDto>? _bienes;
-    private int _filtro;
+    private IReadOnlyList<CatalogoDto> _estados = [];
+    private int? _estadoId;
+    private string _busqueda = string.Empty;
     private string? _mensaje;
     private bool _esError;
 
-    // El filtro se aplica en memoria: la lista ya está cargada y es pequeña.
-    private IEnumerable<BienBusquedaDto> Visibles =>
-        (_bienes ?? []).Where(b => _filtro == 0 || b.EstadoId == _filtro);
+    protected override async Task OnInitializedAsync()
+    {
+        _estados = await RepositorioCatalogos.ObtenerEstadosBienesAsync();
+        await CargarAsync();
+    }
 
-    protected override async Task OnInitializedAsync() => await CargarAsync();
-
+    // Se cargan todos una vez; buscar y filtrar ocurre en memoria.
     private async Task CargarAsync()
     {
         _bienes = await RepositorioBienes.ObtenerParaBusquedaAsync();
+    }
+
+    // "lenovo e16" encuentra la Lenovo Thinkpad E16; también busca por serie, IMEI o teléfono.
+    private bool Coincide(BienBusquedaDto b) => Busqueda.Coincide(_busqueda,
+        b.Identificador, b.TipoBien, b.Descripcion, b.Marca, b.Modelo, b.Serie, b.Telefono, b.Estado);
+
+    private IEnumerable<BienBusquedaDto> CoincidenConBusqueda =>
+        (_bienes ?? []).Where(Coincide);
+
+    private IEnumerable<BienBusquedaDto> Visibles =>
+        CoincidenConBusqueda.Where(b => _estadoId is null || b.EstadoId == _estadoId);
+
+    private int Contar(int? estadoId) =>
+        CoincidenConBusqueda.Count(b => estadoId is null || b.EstadoId == estadoId);
+
+    private IReadOnlyList<FiltroEstados.Opcion> OpcionesFiltro =>
+        [new(null, "Todos", Contar(null)), .. _estados.Select(e => new FiltroEstados.Opcion(e.Id, e.Nombre, Contar(e.Id)))];
+
+    private string Resumen
+    {
+        get
+        {
+            var total = _bienes!.Count;
+            var disponibles = _bienes.Count(b => b.EstadoId == (int)EstadoBien.Disponible);
+            var visibles = Visibles.Count();
+
+            if (visibles != total)
+                return $"Mostrando {visibles} de {total}";
+
+            return $"{total} {(total == 1 ? "bien" : "bienes")}, {disponibles} {(disponibles == 1 ? "disponible" : "disponibles")}";
+        }
+    }
+
+    // Lo que identifica a cada equipo físicamente. El modelo ya aparece junto a la marca
+    // en la columna Equipo, así que aquí no se repite.
+    private static IEnumerable<(string Etiqueta, string Valor)> Identificacion(BienBusquedaDto b)
+    {
+        switch ((TipoBien)b.TipoBienId)
+        {
+            case TipoBien.Celular:
+                if (!string.IsNullOrEmpty(b.Serie))
+                    yield return ("IMEI", b.Serie);
+                if (!string.IsNullOrEmpty(b.Telefono))
+                    yield return ("Tel.", b.Telefono);
+                break;
+
+            case TipoBien.Laptop:
+            case TipoBien.Vehiculo:
+                if (!string.IsNullOrEmpty(b.Serie))
+                    yield return ("Serie", b.Serie);
+                break;
+        }
     }
 
     private static string ClaseEstado(EstadoBien estado) => estado switch

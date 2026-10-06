@@ -1,6 +1,5 @@
 ﻿@page "/resguardos"
 @rendermode InteractiveServer
-@using System.Globalization
 @using SRResguardos.Application.DTOs
 @using SRResguardos.Application.Interfaces.Persistence
 @using SRResguardos.Domain.Enums
@@ -10,7 +9,7 @@
 
 <PageTitle>Resguardos</PageTitle>
 
-<div class="encabezado">
+<div class="cabecera-lista">
     <div>
         <h1>Resguardos</h1>
         @if (_resguardos is not null)
@@ -21,44 +20,11 @@
     <a class="btn btn-primary" href="resguardos/nuevo">Asignar resguardo</a>
 </div>
 
-@* ---------------- Buscador ---------------- *@
-<div class="buscador" role="search">
-    <svg class="buscador-icono" viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2" />
-        <path d="M15.5 15.5 21 21" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
-    </svg>
-    <input type="search" class="buscador-campo"
-           placeholder="Busca por colaborador, folio, bien o puesto"
-           aria-label="Buscar resguardos"
-           @bind="_busqueda" @bind:event="oninput"
-           @onkeydown="TeclaEnBuscador" />
-    @if (_busqueda.Length > 0)
-    {
-        <button type="button" class="buscador-limpiar" @onclick="LimpiarBusqueda" aria-label="Limpiar búsqueda">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
-            </svg>
-        </button>
-    }
-</div>
+<Buscador @bind-Texto="_busqueda"
+          Ayuda="Busca por colaborador, folio, bien o puesto"
+          Etiqueta="Buscar resguardos" />
 
-@* ---------------- Filtro por estado ---------------- *@
-<div class="filtros" role="group" aria-label="Filtrar por estado">
-    <button type="button" class="filtro @(_estadoId is null ? "elegido" : "")"
-            aria-pressed="@(_estadoId is null ? "true" : "false")"
-            @onclick="() => _estadoId = null">
-        Todos <span class="filtro-cuenta numero">@Contar(null)</span>
-    </button>
-    @foreach (var estado in _estados)
-    {
-        var id = estado.Id;
-        <button type="button" class="filtro @(_estadoId == id ? "elegido" : "")"
-                aria-pressed="@(_estadoId == id ? "true" : "false")"
-                @onclick="() => _estadoId = id">
-            @estado.Nombre <span class="filtro-cuenta numero">@Contar(id)</span>
-        </button>
-    }
-</div>
+<FiltroEstados Opciones="OpcionesFiltro" @bind-Elegido="_estadoId" />
 
 @if (_mensaje is not null)
 {
@@ -149,11 +115,6 @@ else
     private string? _mensaje;
     private bool _esError;
 
-    // Comparación que ignora mayúsculas y acentos: "jose" encuentra a "José".
-    // La base distingue acentos (CI_AS); el buscador no, para que sea más amable.
-    private static readonly CompareInfo Comparador = CultureInfo.GetCultureInfo("es-MX").CompareInfo;
-    private const CompareOptions SinAcentosNiMayusculas = CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace;
-
     protected override async Task OnInitializedAsync()
     {
         _estados = await RepositorioCatalogos.ObtenerEstadosResguardoAsync();
@@ -172,25 +133,17 @@ else
     private IEnumerable<ResguardoListaDto> Visibles =>
         CoincidenConBusqueda.Where(r => _estadoId is null || r.EstadoResguardoId == _estadoId);
 
-    // Cada palabra escrita debe aparecer en algún dato del resguardo:
     // "jose laptop" encuentra la laptop de José, en cualquier orden.
-    private bool Coincide(ResguardoListaDto r)
-    {
-        var palabras = _busqueda.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-        if (palabras.Length == 0)
-            return true;
-
-        var texto = string.Join(' ',
-            r.NumeroSerie, r.Colaborador, r.Puesto, r.Entrega, r.TipoBien,
-            r.IdentificadorBien, r.EstadoResguardo, r.Fecha.ToString("dd/MM/yyyy"));
-
-        return palabras.All(p => Comparador.IndexOf(texto, p, SinAcentosNiMayusculas) >= 0);
-    }
+    private bool Coincide(ResguardoListaDto r) => Busqueda.Coincide(_busqueda,
+        r.NumeroSerie, r.Colaborador, r.Puesto, r.Entrega, r.TipoBien,
+        r.IdentificadorBien, r.EstadoResguardo, r.Fecha.ToString("dd/MM/yyyy"));
 
     // Las cuentas de cada estado reflejan lo que se está buscando.
     private int Contar(int? estadoId) =>
         CoincidenConBusqueda.Count(r => estadoId is null || r.EstadoResguardoId == estadoId);
+
+    private IReadOnlyList<FiltroEstados.Opcion> OpcionesFiltro =>
+        [new(null, "Todos", Contar(null)), .. _estados.Select(e => new FiltroEstados.Opcion(e.Id, e.Nombre, Contar(e.Id)))];
 
     private string Resumen
     {
@@ -231,12 +184,6 @@ else
     };
 
     private void LimpiarBusqueda() => _busqueda = string.Empty;
-
-    private void TeclaEnBuscador(KeyboardEventArgs e)
-    {
-        if (e.Key == "Escape")
-            LimpiarBusqueda();
-    }
 
     private Task DevolverAsync(ResguardoListaDto r) => EjecutarAsync(
         $"¿Registrar la devolución del bien {r.IdentificadorBien} de {r.Colaborador}?",

@@ -1,0 +1,51 @@
+﻿.filtros {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.filtro {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.6rem 0.4rem 0.95rem;
+    font: inherit;
+    font-weight: 600;
+    color: var(--tinta);
+    background: #fff;
+    border: 1px solid var(--brote);
+    border-radius: 999px;
+    cursor: pointer;
+}
+
+    .filtro:hover {
+        background: var(--niebla);
+    }
+
+    .filtro:focus-visible {
+        outline: 2px solid var(--hoja);
+        outline-offset: 2px;
+    }
+
+    .filtro.elegido {
+        color: #fff;
+        background: var(--hoja);
+        border-color: var(--hoja);
+    }
+
+.filtro-cuenta {
+    min-width: 1.6rem;
+    padding: 0.05rem 0.45rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-align: center;
+    color: var(--activo-texto);
+    background: var(--hoja-tierna);
+    border-radius: 999px;
+}
+
+.filtro.elegido .filtro-cuenta {
+    color: var(--hoja-oscura);
+    background: #fff;
+}

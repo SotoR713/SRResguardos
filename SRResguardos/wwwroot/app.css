@@ -256,6 +256,99 @@ h1:focus {
     font-variant-numeric: tabular-nums;
 }
 
+/* ---------- Páginas de lista: cabecera, tabla y resultados vacíos ----------
+   Compartidos por Resguardos y Bienes. */
+
+.cabecera-lista {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+    .cabecera-lista h1 {
+        margin: 0;
+    }
+
+.resumen {
+    margin: 0.2rem 0 0;
+    color: var(--tinta-suave);
+}
+
+/* Encabezado fuerte y renglones alternos claros, como en tu Excel */
+.tabla-contenedor {
+    overflow-x: auto;
+    background: #fff;
+    border: 1px solid var(--brote);
+    border-radius: var(--radio-contenedor);
+}
+
+.tabla {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+    .tabla th {
+        padding: 0.75rem 1rem;
+        font-size: 0.88rem;
+        font-weight: 700;
+        text-align: left;
+        white-space: nowrap;
+        color: var(--tinta);
+        background: var(--brote);
+    }
+
+    .tabla td {
+        padding: 0.8rem 1rem;
+        vertical-align: middle;
+        border-top: 1px solid #E6EFE0;
+    }
+
+    .tabla tbody tr:nth-child(even) td {
+        background: #F2F8EE;
+    }
+
+    .tabla tbody tr:hover td {
+        background: #EAF3E4;
+    }
+
+.principal {
+    display: block;
+    font-weight: 600;
+}
+
+.secundario {
+    display: block;
+    margin-top: 0.15rem;
+    font-size: 0.86rem;
+    color: var(--tinta-suave);
+}
+
+.acciones {
+    text-align: right;
+    white-space: nowrap;
+}
+
+    .acciones .btn + .btn {
+        margin-left: 0.3rem;
+    }
+
+.vacio {
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    background: #fff;
+    border: 1px dashed var(--brote);
+    border-radius: var(--radio-contenedor);
+}
+
+    .vacio p {
+        margin-bottom: 1rem;
+        color: var(--tinta-suave);
+    }
+
 /* ---------- Validación ---------- */
 
 .valid.modified:not([type=checkbox]) {

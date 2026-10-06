@@ -1,0 +1,73 @@
+﻿.buscador {
+    position: relative;
+    max-width: 760px;
+    margin-bottom: 1rem;
+}
+
+.buscador-icono {
+    position: absolute;
+    left: 1.2rem;
+    top: 50%;
+    width: 1.35rem;
+    height: 1.35rem;
+    transform: translateY(-50%);
+    color: var(--hoja);
+    pointer-events: none;
+}
+
+.buscador-campo {
+    width: 100%;
+    padding: 1rem 3.4rem 1rem 3.3rem;
+    font: inherit;
+    font-size: 1.2rem;
+    color: var(--tinta);
+    background: #fff;
+    border: 2px solid var(--brote);
+    border-radius: 999px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+    .buscador-campo::placeholder {
+        color: var(--tinta-suave);
+    }
+
+    .buscador-campo:focus {
+        outline: none;
+        border-color: var(--hoja);
+        box-shadow: 0 0 0 5px rgba(76, 122, 56, 0.16);
+    }
+
+    /* El tipo search trae su propia X; se oculta para usar la nuestra */
+    .buscador-campo::-webkit-search-cancel-button {
+        -webkit-appearance: none;
+        appearance: none;
+    }
+
+.buscador-limpiar {
+    position: absolute;
+    right: 0.7rem;
+    top: 50%;
+    width: 2.4rem;
+    height: 2.4rem;
+    padding: 0.55rem;
+    transform: translateY(-50%);
+    color: var(--tinta);
+    background: var(--hoja-tierna);
+    border: 0;
+    border-radius: 999px;
+    cursor: pointer;
+}
+
+    .buscador-limpiar svg {
+        width: 100%;
+        height: 100%;
+    }
+
+    .buscador-limpiar:hover {
+        background: var(--brote);
+    }
+
+    .buscador-limpiar:focus-visible {
+        outline: 2px solid var(--hoja);
+        outline-offset: 2px;
+    }
