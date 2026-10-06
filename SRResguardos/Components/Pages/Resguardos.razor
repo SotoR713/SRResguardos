@@ -1,5 +1,6 @@
 ﻿@page "/resguardos"
 @rendermode InteractiveServer
+@using System.Globalization
 @using SRResguardos.Application.DTOs
 @using SRResguardos.Application.Interfaces.Persistence
 @using SRResguardos.Domain.Enums
@@ -9,20 +10,54 @@
 
 <PageTitle>Resguardos</PageTitle>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="mb-0">Resguardos</h1>
+<div class="encabezado">
+    <div>
+        <h1>Resguardos</h1>
+        @if (_resguardos is not null)
+        {
+            <p class="resumen">@Resumen</p>
+        }
+    </div>
     <a class="btn btn-primary" href="resguardos/nuevo">Asignar resguardo</a>
 </div>
 
-<div class="mb-3" style="max-width: 300px;">
-    <label class="form-label">Filtrar por estado</label>
-    <select class="form-select" value="@_estadoId" @onchange="CambiarEstado">
-        <option value="">Todos</option>
-        @foreach (var estado in _estados)
-        {
-            <option value="@estado.Id">@estado.Nombre</option>
-        }
-    </select>
+@* ---------------- Buscador ---------------- *@
+<div class="buscador" role="search">
+    <svg class="buscador-icono" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2" />
+        <path d="M15.5 15.5 21 21" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
+    </svg>
+    <input type="search" class="buscador-campo"
+           placeholder="Busca por colaborador, folio, bien o puesto"
+           aria-label="Buscar resguardos"
+           @bind="_busqueda" @bind:event="oninput"
+           @onkeydown="TeclaEnBuscador" />
+    @if (_busqueda.Length > 0)
+    {
+        <button type="button" class="buscador-limpiar" @onclick="LimpiarBusqueda" aria-label="Limpiar búsqueda">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
+            </svg>
+        </button>
+    }
+</div>
+
+@* ---------------- Filtro por estado ---------------- *@
+<div class="filtros" role="group" aria-label="Filtrar por estado">
+    <button type="button" class="filtro @(_estadoId is null ? "elegido" : "")"
+            aria-pressed="@(_estadoId is null ? "true" : "false")"
+            @onclick="() => _estadoId = null">
+        Todos <span class="filtro-cuenta numero">@Contar(null)</span>
+    </button>
+    @foreach (var estado in _estados)
+    {
+        var id = estado.Id;
+        <button type="button" class="filtro @(_estadoId == id ? "elegido" : "")"
+                aria-pressed="@(_estadoId == id ? "true" : "false")"
+                @onclick="() => _estadoId = id">
+            @estado.Nombre <span class="filtro-cuenta numero">@Contar(id)</span>
+        </button>
+    }
 </div>
 
 @if (_mensaje is not null)
@@ -32,55 +67,71 @@
 
 @if (_resguardos is null)
 {
-    <p>Cargando...</p>
+    <p class="text-muted">Cargando resguardos...</p>
 }
 else if (_resguardos.Count == 0)
 {
-    <p>No hay resguardos con ese estado.</p>
+    <div class="vacio">
+        <p>Todavía no hay resguardos registrados.</p>
+        <a class="btn btn-primary" href="resguardos/nuevo">Asignar el primero</a>
+    </div>
+}
+else if (!Visibles.Any())
+{
+    <div class="vacio">
+        @if (_busqueda.Trim().Length > 0)
+        {
+            <p>Ningún resguardo coincide con «@_busqueda.Trim()». Prueba con parte del nombre, el folio o el identificador del bien.</p>
+            <button type="button" class="btn btn-outline-primary" @onclick="LimpiarBusqueda">Limpiar búsqueda</button>
+        }
+        else
+        {
+            <p>No hay resguardos en este estado.</p>
+            <button type="button" class="btn btn-outline-primary" @onclick="() => _estadoId = null">Ver todos</button>
+        }
+    </div>
 }
 else
 {
-    <p>@_resguardos.Count resguardo(s)</p>
-
-    <div class="table-responsive">
-        <table class="table align-middle">
+    <div class="tabla-contenedor">
+        <table class="tabla">
             <thead>
                 <tr>
-                    <th>Fecha</th>
-                    <th>Folio</th>
-                    <th>Colaborador</th>
-                    <th>Puesto</th>
-                    <th>Tipo</th>
-                    <th>Bien</th>
-                    <th>Estado</th>
-                    <th>Estado del bien</th>
-                    <th>Acciones</th>
+                    <th scope="col">Folio</th>
+                    <th scope="col">Fecha</th>
+                    <th scope="col">Colaborador</th>
+                    <th scope="col">Bien</th>
+                    <th scope="col">Estado</th>
+                    <th scope="col"><span class="visually-hidden">Acciones</span></th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var r in _resguardos)
+                @foreach (var r in Visibles)
                 {
                     <tr>
-                        <td>@r.Fecha.ToString("dd/MM/yyyy")</td>
-                        <td>@r.NumeroSerie</td>
-                        <td>@r.Colaborador</td>
-                        <td>@r.Puesto</td>
-                        <td>@r.TipoBien</td>
-                        <td>@r.IdentificadorBien</td>
-                        <td>@r.EstadoResguardo</td>
-                        <td>@r.EstadoBien</td>
-                        <td class="text-nowrap">
-                            <a href="resguardos/@r.Id/responsiva">Ver</a>
+                        <td class="numero folio">@r.NumeroSerie</td>
+                        <td class="numero fecha">@r.Fecha.ToString("dd/MM/yyyy")</td>
+                        <td>
+                            <span class="principal">@r.Colaborador</span>
+                            <span class="secundario">@r.Puesto</span>
+                        </td>
+                        <td>
+                            <span class="principal numero">@r.IdentificadorBien</span>
+                            <span class="secundario">@r.TipoBien</span>
+                        </td>
+                        <td>
+                            <span class="estado @ClaseEstado(r.EstadoResguardoId)">@r.EstadoResguardo</span>
+                            @if (EstadoBienDiceAlgo(r))
+                            {
+                                <span class="secundario">@DescribirBien(r)</span>
+                            }
+                        </td>
+                        <td class="acciones">
+                            <a class="btn btn-sm btn-outline-primary" href="resguardos/@r.Id/responsiva">Ver</a>
                             @if (r.EstadoResguardoId == (int)EstadoResguardo.Activo)
                             {
-                                <button class="btn btn-sm btn-outline-warning ms-2"
-                                        @onclick="() => DevolverAsync(r)">
-                                    Devolver
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger ms-1"
-                                        @onclick="() => CancelarAsync(r)">
-                                    Cancelar
-                                </button>
+                                <button class="btn btn-sm btn-outline-warning" @onclick="() => DevolverAsync(r)">Devolver</button>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => CancelarAsync(r)">Cancelar</button>
                             }
                         </td>
                     </tr>
@@ -94,8 +145,14 @@ else
     private IReadOnlyList<ResguardoListaDto>? _resguardos;
     private IReadOnlyList<CatalogoDto> _estados = [];
     private int? _estadoId;
+    private string _busqueda = string.Empty;
     private string? _mensaje;
     private bool _esError;
+
+    // Comparación que ignora mayúsculas y acentos: "jose" encuentra a "José".
+    // La base distingue acentos (CI_AS); el buscador no, para que sea más amable.
+    private static readonly CompareInfo Comparador = CultureInfo.GetCultureInfo("es-MX").CompareInfo;
+    private const CompareOptions SinAcentosNiMayusculas = CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace;
 
     protected override async Task OnInitializedAsync()
     {
@@ -103,19 +160,82 @@ else
         await CargarAsync();
     }
 
-    private async Task CambiarEstado(ChangeEventArgs e)
-    {
-        var valor = e.Value?.ToString();
-
-        _estadoId = string.IsNullOrEmpty(valor) ? null : int.Parse(valor);
-
-        _resguardos = null;
-        await CargarAsync();
-    }
-
+    // Se cargan todos una vez; buscar y filtrar ocurre en memoria, sin volver a la base.
     private async Task CargarAsync()
     {
-        _resguardos = await RepositorioResguardos.ObtenerListaAsync(_estadoId);
+        _resguardos = await RepositorioResguardos.ObtenerListaAsync();
+    }
+
+    private IEnumerable<ResguardoListaDto> CoincidenConBusqueda =>
+        (_resguardos ?? []).Where(Coincide);
+
+    private IEnumerable<ResguardoListaDto> Visibles =>
+        CoincidenConBusqueda.Where(r => _estadoId is null || r.EstadoResguardoId == _estadoId);
+
+    // Cada palabra escrita debe aparecer en algún dato del resguardo:
+    // "jose laptop" encuentra la laptop de José, en cualquier orden.
+    private bool Coincide(ResguardoListaDto r)
+    {
+        var palabras = _busqueda.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+        if (palabras.Length == 0)
+            return true;
+
+        var texto = string.Join(' ',
+            r.NumeroSerie, r.Colaborador, r.Puesto, r.Entrega, r.TipoBien,
+            r.IdentificadorBien, r.EstadoResguardo, r.Fecha.ToString("dd/MM/yyyy"));
+
+        return palabras.All(p => Comparador.IndexOf(texto, p, SinAcentosNiMayusculas) >= 0);
+    }
+
+    // Las cuentas de cada estado reflejan lo que se está buscando.
+    private int Contar(int? estadoId) =>
+        CoincidenConBusqueda.Count(r => estadoId is null || r.EstadoResguardoId == estadoId);
+
+    private string Resumen
+    {
+        get
+        {
+            var total = _resguardos!.Count;
+            var activos = _resguardos.Count(r => r.EstadoResguardoId == (int)EstadoResguardo.Activo);
+            var visibles = Visibles.Count();
+
+            if (visibles != total)
+                return $"Mostrando {visibles} de {total}";
+
+            return $"{total} {(total == 1 ? "resguardo" : "resguardos")}, {activos} {(activos == 1 ? "activo" : "activos")}";
+        }
+    }
+
+    private static string ClaseEstado(int estadoId) => (EstadoResguardo)estadoId switch
+    {
+        EstadoResguardo.Activo => "estado-activo",
+        EstadoResguardo.Devuelto => "estado-devuelto",
+        EstadoResguardo.Cancelado => "estado-cancelado",
+        _ => "estado-baja"
+    };
+
+    // Un resguardo activo siempre tiene su bien asignado: decirlo en cada renglón es ruido.
+    // El estado del bien solo se muestra cuando aporta algo, como un bien en mantenimiento.
+    private static bool EstadoBienDiceAlgo(ResguardoListaDto r) =>
+        !(r.EstadoResguardoId == (int)EstadoResguardo.Activo && r.EstadoBienId == (int)EstadoBien.Asignado);
+
+    private static string DescribirBien(ResguardoListaDto r) => (EstadoBien)r.EstadoBienId switch
+    {
+        EstadoBien.Disponible => "Bien disponible",
+        EstadoBien.Mantenimiento => "Bien en mantenimiento",
+        EstadoBien.Baja => "Bien dado de baja",
+        // Si este resguardo ya no está activo pero su bien sí está asignado, lo tiene otra persona
+        EstadoBien.Asignado => "Bien reasignado",
+        _ => r.EstadoBien
+    };
+
+    private void LimpiarBusqueda() => _busqueda = string.Empty;
+
+    private void TeclaEnBuscador(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+            LimpiarBusqueda();
     }
 
     private Task DevolverAsync(ResguardoListaDto r) => EjecutarAsync(

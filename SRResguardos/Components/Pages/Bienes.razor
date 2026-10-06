@@ -57,7 +57,7 @@ else
                         <td>@b.Identificador</td>
                         <td>@b.TipoBien</td>
                         <td>@b.Descripcion</td>
-                        <td><span class="badge @ClaseEstado(estado)">@b.Estado</span></td>
+                        <td><span class="estado @ClaseEstado(estado)">@b.Estado</span></td>
                         <td class="text-nowrap">
                             @if (estado is EstadoBien.Disponible or EstadoBien.Asignado)
                             {
@@ -98,10 +98,10 @@ else
 
     private static string ClaseEstado(EstadoBien estado) => estado switch
     {
-        EstadoBien.Disponible => "bg-success",
-        EstadoBien.Asignado => "bg-primary",
-        EstadoBien.Mantenimiento => "bg-warning text-dark",
-        _ => "bg-secondary"
+        EstadoBien.Disponible => "estado-disponible",
+        EstadoBien.Asignado => "estado-asignado",
+        EstadoBien.Mantenimiento => "estado-mantenimiento",
+        _ => "estado-baja"
     };
 
     private Task MantenimientoAsync(BienBusquedaDto b) => EjecutarAsync(

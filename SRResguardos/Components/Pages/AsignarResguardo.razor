@@ -30,7 +30,7 @@ else
             <datalist id="lista-empleados">
                 @foreach (var e in _empleados)
                 {
-                    <option value="@e.Nombre">@e.Puesto · @e.Estatus</option>
+                    <option value="@e.Nombre">@e.Puesto, @e.Estatus.ToLower()</option>
                 }
             </datalist>
             <ValidationMessage For="() => _nuevo.ColaboradorId" />
@@ -88,12 +88,12 @@ else
         @* ---------------- Bien: buscador ---------------- *@
         <div class="mb-3">
             <label class="form-label">Bien</label>
-            <input class="form-control" list="lista-bienes" placeholder="Escribe el identificador, por ejemplo 3-3..."
+            <input class="form-control" list="lista-bienes" placeholder="Escribe el identificador, la serie o el IMEI..."
                    @bind="_textoBien" @bind:after="ResolverBien" />
             <datalist id="lista-bienes">
                 @foreach (var b in BienesDisponibles)
                 {
-                    <option value="@b.Identificador">@b.TipoBien · @b.Descripcion</option>
+                    <option value="@b.Identificador">@EtiquetaSugerencia(b)</option>
                 }
             </datalist>
             <ValidationMessage For="() => _nuevo.IdentificadorBien" />
@@ -101,17 +101,33 @@ else
             @switch (_estadoBien)
             {
                 case EstadoBusqueda.Encontrado:
-                    <div class="form-text text-success">@_bien!.TipoBien · @_bien.Descripcion</div>
+                    <div class="ficha-bien">
+                        <div class="ficha-titulo">@_bien!.TipoBien @_bien.Identificador</div>
+                        <dl>
+                            @foreach (var (etiqueta, valor) in DatosDelBien(_bien))
+                            {
+                                <div>
+                                    <dt>@etiqueta</dt>
+                                    <dd class="numero">@valor</dd>
+                                </div>
+                            }
+                        </dl>
+                        <div class="ficha-aviso">Verifica que coincida con la etiqueta del equipo antes de entregarlo.</div>
+                    </div>
                     break;
 
                 case EstadoBusqueda.NoDisponible:
                     <div class="alert alert-danger mt-2 mb-0">
-                        El bien debe estar disponible. @_bien!.Identificador se encuentra en estado <strong>@_bien.Estado</strong>.
+                        El bien debe estar disponible. @_bien!.Identificador (@_bien.Descripcion) se encuentra en estado <strong>@_bien.Estado</strong>.
                     </div>
                     break;
 
                 case EstadoBusqueda.NoExiste:
-                    <div class="alert alert-danger mt-2 mb-0">No existe un bien con el identificador "@_textoBien.Trim()".</div>
+                    <div class="alert alert-danger mt-2 mb-0">No existe un bien con el identificador, la serie o el IMEI "@_textoBien.Trim()".</div>
+                    break;
+
+                case EstadoBusqueda.Varios:
+                    <div class="alert alert-warning mt-2 mb-0">Hay más de un bien con esa serie. Escribe su identificador, por ejemplo 3-4.</div>
                     break;
             }
         </div>
@@ -306,6 +322,23 @@ else
         _bien = _bienes.FirstOrDefault(b =>
             string.Equals(b.Identificador, texto, StringComparison.OrdinalIgnoreCase));
 
+        // Si no es un identificador, quizá es la serie o el IMEI leído de la etiqueta.
+        // La serie solo es única dentro de su tipo, así que podría haber más de una.
+        if (_bien is null)
+        {
+            var porSerie = _bienes
+                .Where(b => string.Equals(b.Serie, texto, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            if (porSerie.Count > 1)
+            {
+                _estadoBien = EstadoBusqueda.Varios;
+                return;
+            }
+
+            _bien = porSerie.FirstOrDefault();
+        }
+
         if (_bien is null)
         {
             _estadoBien = EstadoBusqueda.NoExiste;
@@ -320,6 +353,50 @@ else
 
         _estadoBien = EstadoBusqueda.Encontrado;
         _nuevo.IdentificadorBien = _bien.Identificador;
+    }
+
+    // Texto de cada sugerencia, por ejemplo "Celular Motorola Moto G77, IMEI 3532..., tel. 6621...".
+    // En fondos fijos y otros bienes la descripción ya dice qué es.
+    private static string EtiquetaSugerencia(BienBusquedaDto b)
+    {
+        var tipo = (TipoBien)b.TipoBienId;
+
+        var partes = new List<string>
+        {
+            tipo is TipoBien.FondoFijo or TipoBien.Otros ? b.Descripcion : $"{b.TipoBien} {b.Descripcion}"
+        };
+
+        if (!string.IsNullOrEmpty(b.Serie))
+            partes.Add(tipo == TipoBien.Celular ? $"IMEI {b.Serie}" : $"serie {b.Serie}");
+
+        if (!string.IsNullOrEmpty(b.Telefono))
+            partes.Add($"tel. {b.Telefono}");
+
+        return string.Join(", ", partes);
+    }
+
+    // Renglones de la ficha. Solo aparecen los datos que el bien tiene.
+    private static IEnumerable<(string Etiqueta, string Valor)> DatosDelBien(BienBusquedaDto b)
+    {
+        var tipo = (TipoBien)b.TipoBienId;
+
+        if (tipo is TipoBien.FondoFijo or TipoBien.Otros)
+        {
+            yield return ("Descripción", b.Descripcion);
+            yield break;
+        }
+
+        if (!string.IsNullOrEmpty(b.Marca))
+            yield return ("Marca", b.Marca);
+
+        if (!string.IsNullOrEmpty(b.Modelo))
+            yield return ("Modelo", b.Modelo);
+
+        if (!string.IsNullOrEmpty(b.Serie))
+            yield return (tipo == TipoBien.Celular ? "IMEI" : "Número de serie", b.Serie);
+
+        if (!string.IsNullOrEmpty(b.Telefono))
+            yield return ("Teléfono", b.Telefono);
     }
 
     private async Task AsignarAsync()

@@ -1,4 +1,4 @@
-.page {
+﻿.page {
     position: relative;
     display: flex;
     flex-direction: column;
@@ -9,12 +9,13 @@ main {
 }
 
 .sidebar {
-    background-image: linear-gradient(180deg, rgb(5, 39, 103) 0%, #3a0647 70%);
+    background-color: var(--hoja-tierna);
+    border-right: 1px solid var(--brote);
 }
 
 .top-row {
-    background-color: #f7f7f7;
-    border-bottom: 1px solid #d6d5d5;
+    background-color: var(--niebla);
+    border-bottom: 1px solid var(--brote);
     justify-content: flex-end;
     height: 3.5rem;
     display: flex;
@@ -78,7 +79,8 @@ main {
 
 #blazor-error-ui {
     color-scheme: light only;
-    background: lightyellow;
+    background: var(--mantenimiento-fondo);
+    color: var(--mantenimiento-texto);
     bottom: 0;
     box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
     box-sizing: border-box;
@@ -96,3 +98,8 @@ main {
         right: 0.75rem;
         top: 0.5rem;
     }
+
+.top-row ::deep .btn-link {
+    font-weight: 600;
+    color: var(--hoja);
+}

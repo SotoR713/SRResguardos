@@ -29,7 +29,12 @@ public class BienRepository : IBienRepository
                     o.Caracteristica1
                 ) AS Descripcion,
                 b.EstadoId,
-                eb.Nombre AS Estado
+                eb.Nombre AS Estado,
+                b.TipoBienId,
+                COALESCE(v.Marca, c.Marca, l.Marca) AS Marca,
+                COALESCE(v.Modelo, c.Modelo, l.Modelo) AS Modelo,
+                COALESCE(v.NumeroSerie, c.Imei, l.Serie) AS Serie,
+                c.Numero AS Telefono
             FROM Bienes b
             INNER JOIN TiposBien t      ON t.Id  = b.TipoBienId
             INNER JOIN EstadosBienes eb ON eb.Id = b.EstadoId
@@ -63,7 +68,12 @@ public class BienRepository : IBienRepository
                 TipoBien = lector.GetString(1),
                 Descripcion = lector.IsDBNull(2) ? "(sin datos del tipo)" : lector.GetString(2),
                 EstadoId = lector.GetInt32(3),
-                Estado = lector.GetString(4)
+                Estado = lector.GetString(4),
+                TipoBienId = lector.GetInt32(5),
+                Marca = TextoONulo(lector, 6),
+                Modelo = TextoONulo(lector, 7),
+                Serie = TextoONulo(lector, 8),
+                Telefono = TextoONulo(lector, 9)
             });
         }
 
@@ -310,6 +320,10 @@ public class BienRepository : IBienRepository
         if (filas == 0)
             throw new InvalidOperationException(mensajeSiNoAplica);
     }
+
+    // Lee una columna que puede venir nula: GetString lanzaría una excepción con NULL.
+    private static string? TextoONulo(SqlDataReader lector, int posicion) =>
+        lector.IsDBNull(posicion) ? null : lector.GetString(posicion);
 
     // Texto vacío o solo espacios se guarda como NULL; lo demás, sin espacios en los extremos.
     private static object Texto(string? valor) =>

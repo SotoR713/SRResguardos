@@ -13,4 +13,5 @@ public class ResguardoListaDto
     public string EstadoResguardo { get; set; } = string.Empty;
     public string EstadoBien { get; set; } = string.Empty;
     public int EstadoResguardoId { get; set; }
+    public int EstadoBienId { get; set; }
 }

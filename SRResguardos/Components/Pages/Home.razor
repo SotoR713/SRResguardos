@@ -18,9 +18,9 @@
 else
 {
     <div class="row g-3 mb-4">
-        <Indicador Titulo="Disponibles" Valor="@Contar(EstadoBien.Disponible)" Clase="text-success" Enlace="bienes" />
-        <Indicador Titulo="Asignados" Valor="@Contar(EstadoBien.Asignado)" Clase="text-primary" Enlace="bienes" />
-        <Indicador Titulo="En mantenimiento" Valor="@Contar(EstadoBien.Mantenimiento)" Clase="text-warning" Enlace="bienes" />
+        <Indicador Titulo="Disponibles" Valor="@Contar(EstadoBien.Disponible)" Clase="cifra-disponible" Enlace="bienes" />
+        <Indicador Titulo="Asignados" Valor="@Contar(EstadoBien.Asignado)" Clase="cifra-asignado" Enlace="bienes" />
+        <Indicador Titulo="En mantenimiento" Valor="@Contar(EstadoBien.Mantenimiento)" Clase="cifra-mantenimiento" Enlace="bienes" />
         <Indicador Titulo="Resguardos activos" Valor="@_resguardosActivos" Clase="" Enlace="resguardos" />
         <Indicador Titulo="Empleados activos" Valor="@_empleadosActivos" Clase="" Enlace="empleados" />
     </div>

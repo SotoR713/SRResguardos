@@ -29,7 +29,8 @@ public class ResguardoRepository : IResguardoRepository
             r.Fecha,
             er.Nombre AS EstadoResguardo,
             eb.Nombre AS EstadoBien,
-            r.EstadoId
+            r.EstadoId,
+            b.EstadoId AS EstadoBienId
         FROM Resguardos r
         INNER JOIN Empleados e         ON e.Id  = r.ColaboradorId
         INNER JOIN Empleados en        ON en.Id = r.EntregaId
@@ -68,7 +69,8 @@ public class ResguardoRepository : IResguardoRepository
                 Fecha = DateOnly.FromDateTime(lector.GetDateTime(7)),
                 EstadoResguardo = lector.GetString(8),
                 EstadoBien = lector.GetString(9),
-                EstadoResguardoId = lector.GetInt32(10)
+                EstadoResguardoId = lector.GetInt32(10),
+                EstadoBienId = lector.GetInt32(11)
             });
         }
 
